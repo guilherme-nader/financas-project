@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+/* Tokens da Versão 1 (moderno): fundo cinza claro, cartões brancos, verde-petróleo. */
+@theme {
+  --color-fundo: #f3f4f6;
+  --color-cartao: #ffffff;
+  --color-tinta: #14171c;
+  --color-suave: #586070;
+  --color-borda: #e2e5ea;
+  --color-linha: #eef0f3;
+  --color-marca: #0a6b58;
+  --color-marca-escura: #075244;
+  --color-marca-clara: #e3f1ed;
+  --color-alerta: #a8430a;
+  --color-alerta-clara: #fceee3;
+  --color-gui: #1e58b0;
+  --color-gui-clara: #e5edfa;
+  --color-deb: #7a35a8;
+  --color-deb-clara: #f2e8f8;
+  --color-casal: #3f4654;
+  --color-casal-clara: #e9ebef;
+  --color-erro: #b3261e;
+
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-titulo: var(--font-grotesk), var(--font-inter), system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-fundo);
+  color: var(--color-tinta);
+}
+
+/* Números alinhados em colunas de valores. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
