@@ -10,7 +10,7 @@ e os extratos do mês e o sistema organiza o resto.
 | 1. Base | Login dos dois, contas (corrente, cartão, investimento), categorias, lançamento manual com parcelas e transferências, resumo do mês | ✅ pronta |
 | 2. Histórico | Importar as planilhas "Planejamento oficial" e a planilha-modelo | próxima |
 | 3. Projeção | Recorrências (financiamento, condomínio, salários) e a visão meses × contas | |
-| 4. Importação | Faturas e extratos (PDF, OFX, CSV), regras de categorização, IA gratuita (Groq) para o que as regras não conhecem | |
+| 4. Importação | ✅ Faturas do cartão XP (CSV), regras de categorização, tela Revisar, parcelas futuras e conferência de pagamento · ⏳ extratos de conta (OFX/CSV/PDF), IA gratuita (Groq) | em andamento |
 | 5. Orçamento e metas | Limites por categoria e metas com progresso | |
 
 ## Como o dinheiro é contado
@@ -24,6 +24,17 @@ e os extratos do mês e o sistema organiza o resto.
 - **Transferências não são gasto nem renda**: pagamento de fatura, aporte e resgate na XP, Pix entre contas.
   São duas linhas ligadas (uma sai, outra entra) e ficam fora dos totais.
 - **Patrimônio** = saldo das contas + investimentos − o que se deve nos cartões.
+
+## Importar uma fatura (cartão XP)
+
+1. Cadastre o cartão em **Mais › Contas** com os dias de fechamento e vencimento.
+2. Em **Importar**, escolha o CSV exportado pela XP (`Fatura2026-10-10.csv`). O vencimento vem do nome do arquivo.
+3. O app:
+   - categoriza pelas regras (`UBER` → Transporte › Uber e 99, `WELLHUB` → Saúde › Academia…);
+   - lança as **parcelas futuras** como previstas e as confirma quando chega a fatura seguinte;
+   - ignora o que já foi importado (reimportar o mesmo arquivo não duplica);
+   - confere se o pagamento listado bate com o total da fatura anterior.
+4. O que nenhuma regra conhece vai para **Revisar**. Ao confirmar com "lembrar", vira regra e é aplicado nos outros pendentes iguais.
 
 ## Rodar localmente
 

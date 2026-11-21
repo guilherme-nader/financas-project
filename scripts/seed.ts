@@ -13,8 +13,9 @@ import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../src/db/schema";
+import { REGRAS_INICIAIS } from "../src/lib/importacao/regras";
 
-const { pessoas, categorias, usuarios } = schema;
+const { pessoas, categorias, usuarios, regras } = schema;
 
 const sql = postgres(process.env.DATABASE_URL!, { max: 1, prepare: false });
 const db = drizzle(sql, { schema });
@@ -110,6 +111,26 @@ async function main() {
   for (const nome of TRANSFERENCIAS) {
     await garantirCategoria(nome, "transferencia", null, ordem++, true);
   }
+
+  // Regras prontas de categorização ("UBER" -> Transporte › Uber e 99).
+  let regrasNovas = 0;
+  for (const [padrao, caminho, nome] of REGRAS_INICIAIS) {
+    const [paiNome, filhaNome] = caminho.split("/");
+    const pai = await db.query.categorias.findFirst({
+      where: and(eq(categorias.nome, paiNome), eq(categorias.tipo, "despesa"), isNull(categorias.paiId)),
+    });
+    const alvo = filhaNome
+      ? await db.query.categorias.findFirst({ where: and(eq(categorias.nome, filhaNome), eq(categorias.paiId, pai!.id)) })
+      : pai;
+    if (!alvo) throw new Error(`Regra ${padrao}: categoria "${caminho}" não existe`);
+    const inseridas = await db
+      .insert(regras)
+      .values({ padrao, categoriaId: alvo.id, nome: nome ?? null, origem: "sistema" })
+      .onConflictDoNothing({ target: regras.padrao })
+      .returning({ id: regras.id });
+    regrasNovas += inseridas.length;
+  }
+  if (regrasNovas) console.log(`✓ ${regrasNovas} regras de categorização criadas`);
 
   const usuariosEnv = [
     { pessoa: "Guilherme", email: process.env.GUILHERME_EMAIL, senha: process.env.GUILHERME_SENHA },

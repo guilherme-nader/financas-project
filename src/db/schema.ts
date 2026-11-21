@@ -13,6 +13,7 @@ import {
   unique,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 /**
  * Convenções do modelo
@@ -30,6 +31,7 @@ export const tipoMovimento = pgEnum("tipo_movimento", ["despesa", "receita", "tr
 export const statusTransacao = pgEnum("status_transacao", ["prevista", "realizada"]);
 export const origemTransacao = pgEnum("origem_transacao", ["manual", "importacao", "recorrencia"]);
 export const statusFatura = pgEnum("status_fatura", ["aberta", "fechada", "paga"]);
+export const origemRegra = pgEnum("origem_regra", ["sistema", "usuario"]);
 
 /** Guilherme, Débora e "Casal" (compartilhada = true). */
 export const pessoas = pgTable("pessoas", {
@@ -101,6 +103,25 @@ export const faturas = pgTable(
   (t) => [uniqueIndex("faturas_conta_vencimento_idx").on(t.contaId, t.dataVencimento)],
 );
 
+/** Cada arquivo importado (fatura, extrato): o que entrou e o que foi ignorado. */
+export const importacoes = pgTable("importacoes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  contaId: uuid("conta_id")
+    .notNull()
+    .references(() => contas.id, { onDelete: "cascade" }),
+  formato: text("formato").notNull(),
+  arquivoNome: text("arquivo_nome").notNull(),
+  /** Para faturas: o vencimento. */
+  referencia: date("referencia", { mode: "string" }),
+  totalLinhas: integer("total_linhas").notNull().default(0),
+  novas: integer("novas").notNull().default(0),
+  confirmadas: integer("confirmadas").notNull().default(0),
+  duplicadas: integer("duplicadas").notNull().default(0),
+  paraRevisar: integer("para_revisar").notNull().default(0),
+  criadoPorId: uuid("criado_por_id").references(() => usuarios.id, { onDelete: "set null" }),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const transacoes = pgTable(
   "transacoes",
   {
@@ -129,6 +150,9 @@ export const transacoes = pgTable(
     /** Os dois lados de uma transferência (saída e entrada) compartilham este id. */
     transferenciaId: uuid("transferencia_id"),
     precisaRevisao: boolean("precisa_revisao").notNull().default(false),
+    importacaoId: uuid("importacao_id").references(() => importacoes.id, { onDelete: "set null" }),
+    /** Identidade da linha no arquivo de origem: reimportar o mesmo arquivo não duplica. */
+    chaveImportacao: text("chave_importacao"),
     observacao: text("observacao"),
     criadoPorId: uuid("criado_por_id").references(() => usuarios.id, { onDelete: "set null" }),
     criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
@@ -140,6 +164,9 @@ export const transacoes = pgTable(
     index("transacoes_conta_idx").on(t.contaId),
     index("transacoes_grupo_parcelamento_idx").on(t.grupoParcelamentoId),
     index("transacoes_transferencia_idx").on(t.transferenciaId),
+    uniqueIndex("transacoes_conta_chave_idx")
+      .on(t.contaId, t.chaveImportacao)
+      .where(sql`${t.chaveImportacao} is not null`),
   ],
 );
 
@@ -158,6 +185,25 @@ export const saldosInvestimento = pgTable(
   (t) => [uniqueIndex("saldos_investimento_conta_mes_idx").on(t.contaId, t.mes)],
 );
 
+/** "Se a descrição contém `padrao`, a categoria é esta." */
+export const regras = pgTable(
+  "regras",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Forma compacta: sem acento, maiúsculo, sem espaços (ver lib/importacao/texto.ts). */
+    padrao: text("padrao").notNull(),
+    categoriaId: uuid("categoria_id")
+      .notNull()
+      .references(() => categorias.id, { onDelete: "cascade" }),
+    /** Nome bonito para a descrição (ex.: "Uber"). */
+    nome: text("nome"),
+    origem: origemRegra("origem").notNull().default("usuario"),
+    vezesUsada: integer("vezes_usada").notNull().default(0),
+    criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("regras_padrao_idx").on(t.padrao)],
+);
+
 export type Pessoa = typeof pessoas.$inferSelect;
 export type Usuario = typeof usuarios.$inferSelect;
 export type Conta = typeof contas.$inferSelect;
@@ -165,3 +211,5 @@ export type Categoria = typeof categorias.$inferSelect;
 export type Fatura = typeof faturas.$inferSelect;
 export type Transacao = typeof transacoes.$inferSelect;
 export type NovaTransacao = typeof transacoes.$inferInsert;
+export type Regra = typeof regras.$inferSelect;
+export type Importacao = typeof importacoes.$inferSelect;

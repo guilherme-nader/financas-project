@@ -38,6 +38,20 @@ export function cicloDaFatura(
   };
 }
 
+/**
+ * Data de fechamento de uma fatura cujo vencimento já se conhece (ex.: veio no arquivo).
+ * Sem os dias configurados no cartão, assume 7 dias antes do vencimento.
+ */
+export function fechamentoPeloVencimento(
+  vencimento: DataISO,
+  diaFechamento: number | null,
+  diaVencimento: number | null,
+): DataISO {
+  const { ano, mes, dia } = partes(vencimento);
+  if (!diaFechamento || !diaVencimento) return montarData(ano, mes, dia - 7 > 0 ? dia - 7 : 1);
+  return montarData(ano, diaVencimento > diaFechamento ? mes : mes - 1, diaFechamento);
+}
+
 function validarDia(dia: number, nome: string) {
   if (!Number.isInteger(dia) || dia < 1 || dia > 31) {
     throw new Error(`Dia de ${nome} inválido: ${dia}`);

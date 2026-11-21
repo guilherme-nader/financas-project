@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
-import { categorias, contas, pessoas, transacoes, type Categoria } from "@/db/schema";
+import { categorias, contas, importacoes, pessoas, transacoes, type Categoria } from "@/db/schema";
 import { cicloDaFatura } from "./cartao";
 import { primeiroDia, ultimoDia, type DataISO, type MesISO } from "./datas";
 import { exigirUsuario } from "./dal";
@@ -252,4 +252,59 @@ export async function obterLancamento(id: string) {
     par = outra ?? null;
   }
   return { ...linha, par };
+}
+
+export type ItemRevisao = Awaited<ReturnType<typeof listarParaRevisar>>[number];
+
+/** Lançamentos importados que as regras não souberam categorizar. */
+export async function listarParaRevisar() {
+  await exigirUsuario();
+  return db
+    .select({
+      id: transacoes.id,
+      tipo: transacoes.tipo,
+      data: transacoes.data,
+      descricao: transacoes.descricao,
+      descricaoOriginal: transacoes.descricaoOriginal,
+      valorCentavos: transacoes.valorCentavos,
+      parcelaNumero: transacoes.parcelaNumero,
+      parcelaTotal: transacoes.parcelaTotal,
+      contaNome: contas.nome,
+      pessoaNome: pessoas.nome,
+      pessoaCor: pessoas.cor,
+    })
+    .from(transacoes)
+    .innerJoin(contas, eq(contas.id, transacoes.contaId))
+    .innerJoin(pessoas, eq(pessoas.id, transacoes.pessoaId))
+    .where(and(eq(transacoes.precisaRevisao, true), eq(transacoes.status, "realizada")))
+    .orderBy(desc(transacoes.data), asc(transacoes.descricao));
+}
+
+export async function contarParaRevisar(): Promise<number> {
+  await exigirUsuario();
+  const [linha] = await db
+    .select({ n: sql<number>`count(*)`.mapWith(Number) })
+    .from(transacoes)
+    .where(and(eq(transacoes.precisaRevisao, true), eq(transacoes.status, "realizada")));
+  return linha.n;
+}
+
+export async function listarImportacoesRecentes(limite = 8) {
+  await exigirUsuario();
+  return db
+    .select({
+      id: importacoes.id,
+      arquivoNome: importacoes.arquivoNome,
+      referencia: importacoes.referencia,
+      novas: importacoes.novas,
+      confirmadas: importacoes.confirmadas,
+      duplicadas: importacoes.duplicadas,
+      paraRevisar: importacoes.paraRevisar,
+      criadoEm: importacoes.criadoEm,
+      contaNome: contas.nome,
+    })
+    .from(importacoes)
+    .innerJoin(contas, eq(contas.id, importacoes.contaId))
+    .orderBy(desc(importacoes.criadoEm))
+    .limit(limite);
 }

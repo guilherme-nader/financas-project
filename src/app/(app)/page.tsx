@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { BotaoLink, Cartao, Esqueleto, SeletorMes, TituloSecao, Vazio, estiloPessoa } from "@/componentes/ui";
 import { IconeAlerta } from "@/componentes/icones";
-import { listarContas, resumoDoMes } from "@/lib/consultas";
+import { contarParaRevisar, listarContas, resumoDoMes } from "@/lib/consultas";
 import { usuarioAtual, hoje } from "@/lib/dal";
 import { ehMesValido, mesDe, nomeDoMes, somarMesesAoMes, dataCurta } from "@/lib/datas";
 import { formatarCentavos } from "@/lib/dinheiro";
@@ -22,7 +22,12 @@ async function Conteudo({ searchParams }: { searchParams: PageProps<"/">["search
   const dataHoje = await hoje();
   const mes = ehMesValido(typeof sp.mes === "string" ? sp.mes : null) ? (sp.mes as string) : mesDe(dataHoje);
 
-  const [usuario, resumo, contas] = await Promise.all([usuarioAtual(), resumoDoMes(mes), listarContas(dataHoje)]);
+  const [usuario, resumo, contas, paraRevisar] = await Promise.all([
+    usuarioAtual(),
+    resumoDoMes(mes),
+    listarContas(dataHoje),
+    contarParaRevisar(),
+  ]);
   const saldoContas = contas
     .filter((c) => c.tipo !== "cartao")
     .reduce((soma, c) => soma + c.saldoCentavos, 0);
@@ -48,7 +53,7 @@ async function Conteudo({ searchParams }: { searchParams: PageProps<"/">["search
           <span className="tabular font-titulo text-4xl font-semibold tracking-tight">
             {formatarCentavos(resumo.resultadoCentavos, { sinal: true })}
           </span>
-          {contas.length > 0 && (
+          {contas.some((c) => c.tipo !== "cartao") && (
             <span className="text-[13px] text-suave">
               Saldo hoje nas contas e investimentos:{" "}
               <strong className="font-semibold whitespace-nowrap text-tinta">{formatarCentavos(saldoContas)}</strong>
@@ -69,17 +74,17 @@ async function Conteudo({ searchParams }: { searchParams: PageProps<"/">["search
         </div>
       </Cartao>
 
-      {resumo.paraRevisar > 0 && (
+      {paraRevisar > 0 && (
         <section className="flex flex-col gap-2.5 rounded-[20px] bg-alerta-clara px-4.5 py-4">
           <div className="flex items-center gap-2 text-alerta">
             <IconeAlerta tamanho={18} />
             <span className="text-sm font-semibold">Precisa da sua atenção</span>
           </div>
           <Link
-            href={`/lancamentos?mes=${mes}`}
+            href="/revisar"
             className="flex min-h-11 items-center justify-between rounded-xl bg-cartao px-3.5 text-sm font-medium"
           >
-            {resumo.paraRevisar} {resumo.paraRevisar === 1 ? "lançamento" : "lançamentos"} para revisar
+            {paraRevisar} {paraRevisar === 1 ? "lançamento" : "lançamentos"} para revisar
             <span className="font-semibold text-alerta">Revisar ›</span>
           </Link>
         </section>

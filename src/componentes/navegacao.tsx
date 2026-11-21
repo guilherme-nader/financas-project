@@ -28,7 +28,9 @@ export function BarraDeAbas({ caminho }: { caminho: string | null }) {
       ? caminho === "/"
       : href === "/mais"
         ? SOB_MAIS.some((p) => caminho.startsWith(p))
-        : caminho.startsWith(href);
+        : href === "/importar"
+          ? caminho.startsWith("/importar") || caminho.startsWith("/revisar")
+          : caminho.startsWith(href);
 
   return (
     <nav
