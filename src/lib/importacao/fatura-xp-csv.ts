@@ -1,5 +1,6 @@
 import { ehDataValida, type DataISO } from "../datas";
 import { lerValorEmCentavos } from "../dinheiro";
+import { limparControle } from "./texto";
 
 /**
  * Leitor da fatura do cartão XP exportada em CSV:
@@ -71,7 +72,7 @@ function lerParcela(texto: string): { numero: number; total: number } | null {
 }
 
 export function lerFaturaXpCsv(conteudo: string): FaturaLida {
-  const linhas = conteudo.replace(/^﻿/, "").split(/\r?\n/);
+  const linhas = limparControle(conteudo).replace(/^﻿/, "").split(/\r?\n/);
   const cabecalho = (linhas[0] ?? "").split(";").map((c) => c.trim().toLowerCase());
   const col = (nome: string) => cabecalho.indexOf(nome);
   const iData = col("data");

@@ -3,6 +3,14 @@
  */
 
 /** Sem acento, maiúsculo, espaços simples: "Pão  da Praça" -> "PAO DA PRACA". */
+/**
+ * Tira caracteres de controle (byte nulo etc.) que alguns bancos deixam no arquivo
+ * (a XP exportou "NEG\0CIOS" no lugar de "NEGÓCIOS"). O banco de dados recusa texto com byte nulo.
+ */
+export function limparControle(texto: string): string {
+  return texto.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
+}
+
 export function normalizar(texto: string): string {
   return texto
     .normalize("NFD")

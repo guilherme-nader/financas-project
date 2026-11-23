@@ -184,3 +184,11 @@ describe("fechamentoPeloVencimento", () => {
     expect(fechamentoPeloVencimento("2026-10-15", null, null)).toBe("2026-10-08");
   });
 });
+
+describe("arquivo com byte nulo", () => {
+  it("a fatura XP com caractere de controle no nome do estabelecimento é lida sem ele", () => {
+    const csv = "Data;Estabelecimento;Portador;Valor;Parcela\r\n12/08/2026;LOJA DE NEG\u0000CIOS;FULANA;R$ 19,15;-\r\n";
+    const lida = lerFaturaXpCsv(csv);
+    expect(lida.compras[0].descricaoOriginal).toBe("LOJA DE NEGCIOS");
+  });
+});

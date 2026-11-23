@@ -31,7 +31,8 @@ e os extratos do mês e o sistema organiza o resto.
 2. Em **Importar**, escolha o CSV exportado pela XP (`Fatura2026-10-10.csv`). O vencimento vem do nome do arquivo.
 3. O app:
    - categoriza pelas regras (`UBER` → Transporte › Uber e 99, `WELLHUB` → Saúde › Academia…);
-   - lança as **parcelas futuras** como previstas e as confirma quando chega a fatura seguinte;
+   - lança as **parcelas futuras** como previstas e as confirma quando chega a fatura seguinte
+     (em qualquer ordem de importação, mesmo quando a 1ª parcela tem centavos de arredondamento a mais);
    - ignora o que já foi importado (reimportar o mesmo arquivo não duplica);
    - confere se o pagamento listado bate com o total da fatura anterior.
 4. O que nenhuma regra conhece vai para **Revisar**. Ao confirmar com "lembrar", vira regra e é aplicado nos outros pendentes iguais.

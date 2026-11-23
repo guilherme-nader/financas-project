@@ -11,6 +11,9 @@ import { planejarFatura } from "./planejar-fatura";
 import { encontrarRegra, ordenarRegras } from "./regras";
 import { descricaoAmigavel, normalizar } from "./texto";
 
+/** Diferença máxima, em centavos, entre parcelas da mesma compra (arredondamento da divisão). */
+const TOLERANCIA_PARCELA = 10;
+
 export type ResumoImportacao = {
   importacaoId: string;
   compras: number;
@@ -114,11 +117,36 @@ export async function gravarFatura(params: {
       return faturaIds.get(venc)!;
     };
 
+    // Parcelas já casadas nesta importação (duas compras iguais não podem cair na mesma linha).
+    const casadas = new Set<string>();
     for (const linha of plano) {
-      const existente = await tx.query.transacoes.findFirst({
+      let existente = await tx.query.transacoes.findFirst({
         where: and(eq(transacoes.contaId, conta.id), eq(transacoes.chaveImportacao, linha.chave)),
         columns: { id: true, status: true },
       });
+      // Parcela com centavos de arredondamento diferentes entre faturas (1ª de R$ 666,68 e as
+      // seguintes de R$ 666,66): a chave muda pelo valor, então procura a mesma compra
+      // (mês, loja, número e total de parcelas) com valor até alguns centavos de diferença.
+      if (!existente && linha.grupo && linha.parcelaNumero && linha.parcelaTotal) {
+        const [, mesCompra, estab] = linha.chave.split("|");
+        const parecidas = await tx
+          .select({ id: transacoes.id, status: transacoes.status })
+          .from(transacoes)
+          .where(
+            and(
+              eq(transacoes.contaId, conta.id),
+              eq(transacoes.parcelaNumero, linha.parcelaNumero),
+              eq(transacoes.parcelaTotal, linha.parcelaTotal),
+              sql`split_part(${transacoes.chaveImportacao}, '|', 1) = 'p'`,
+              sql`split_part(${transacoes.chaveImportacao}, '|', 2) = ${mesCompra}`,
+              sql`split_part(${transacoes.chaveImportacao}, '|', 3) = ${estab}`,
+              sql`abs(${transacoes.valorCentavos} - ${linha.valorCentavos}) <= ${TOLERANCIA_PARCELA}`,
+            ),
+          )
+          .orderBy(sql`abs(${transacoes.valorCentavos} - ${linha.valorCentavos})`);
+        existente = parecidas.find((p) => !casadas.has(p.id));
+      }
+      if (existente) casadas.add(existente.id);
       const faturaId = linha.ehPagamento ? null : await faturaDe(linha.dataCaixa);
 
       if (existente) {
@@ -127,6 +155,8 @@ export async function gravarFatura(params: {
             .update(transacoes)
             .set({
               status: "realizada",
+              // O valor real da parcela (pode diferir em centavos do previsto).
+              valorCentavos: linha.valorCentavos,
               data: linha.data,
               dataCaixa: linha.dataCaixa,
               faturaId,

@@ -1,6 +1,7 @@
 import { ehDataValida, type DataISO } from "../datas";
 import type { ExtratoLido, MovimentoExtrato } from "./extrato";
 import { ErroDeFormato } from "./fatura-xp-csv";
+import { limparControle } from "./texto";
 
 /**
  * Leitor de OFX (o formato de "exportar para gerenciador financeiro" dos bancos).
@@ -50,7 +51,8 @@ export function separarMemo(memo: string): { lancamento: string; descricao: stri
   return { lancamento: partes[0], descricao: partes[1] ?? "" };
 }
 
-export function lerOfx(texto: string): ExtratoLido {
+export function lerOfx(bruto: string): ExtratoLido {
+  const texto = limparControle(bruto);
   if (!/<OFX>/i.test(texto)) throw new ErroDeFormato("Não parece um arquivo OFX.");
   if (/<CREDITCARDMSGSRSV1>/i.test(texto)) {
     throw new ErroDeFormato("Este OFX é de cartão de crédito. Importe-o na aba Fatura de cartão.");
@@ -92,7 +94,7 @@ export function lerOfx(texto: string): ExtratoLido {
 
 /** CSV da conta Nubank: Data,Valor,Identificador,Descrição (mesmo identificador do OFX). */
 export function lerExtratoNubankCsv(texto: string): ExtratoLido {
-  const linhas = texto.replace(/^﻿/, "").split(/\r?\n/).filter((l) => l.trim());
+  const linhas = limparControle(texto).replace(/^﻿/, "").split(/\r?\n/).filter((l) => l.trim());
   if (!/^Data,Valor,Identificador,Descri/i.test(linhas[0] ?? "")) {
     throw new ErroDeFormato("Não parece o CSV do extrato da conta Nubank.");
   }
