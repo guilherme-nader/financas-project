@@ -6,6 +6,7 @@ import { categorias, faturas, importacoes, pessoas, regras, transacoes, type Con
 import { fechamentoPeloVencimento } from "../cartao";
 import type { DataISO } from "../datas";
 import type { FaturaLida } from "./fatura-xp-csv";
+import { parearTransferencias } from "./parear";
 import { planejarFatura } from "./planejar-fatura";
 import { encontrarRegra, ordenarRegras } from "./regras";
 import { descricaoAmigavel, normalizar } from "./texto";
@@ -184,6 +185,8 @@ export async function gravarFatura(params: {
       });
       if (confere) await tx.update(faturas).set({ status: "paga" }).where(eq(faturas.id, anterior.id));
     }
+
+    await parearTransferencias(tx);
 
     for (const [id, vezes] of usoDeRegras) {
       await tx

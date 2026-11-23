@@ -10,7 +10,7 @@ e os extratos do mês e o sistema organiza o resto.
 | 1. Base | Login dos dois, contas (corrente, cartão, investimento), categorias, lançamento manual com parcelas e transferências, resumo do mês | ✅ pronta |
 | 2. Histórico | Importar as planilhas "Planejamento oficial" e a planilha-modelo | próxima |
 | 3. Projeção | Recorrências (financiamento, condomínio, salários) e a visão meses × contas | |
-| 4. Importação | ✅ Faturas do cartão XP (CSV), regras de categorização, tela Revisar, parcelas futuras e conferência de pagamento · ⏳ extratos de conta (OFX/CSV/PDF), IA gratuita (Groq) | em andamento |
+| 4. Importação | ✅ Faturas do cartão XP (CSV) · ✅ Extratos em PDF do Itaú (conta corrente) e do Santander (consolidado) · ✅ Regras, Revisar (um a um ou em grupo), transferências entre contas ligadas sozinhas · ⏳ conta XP (PDF em imagem, OCR), IA gratuita (Groq) | em andamento |
 | 5. Orçamento e metas | Limites por categoria e metas com progresso | |
 
 ## Como o dinheiro é contado
@@ -35,6 +35,20 @@ e os extratos do mês e o sistema organiza o resto.
    - ignora o que já foi importado (reimportar o mesmo arquivo não duplica);
    - confere se o pagamento listado bate com o total da fatura anterior.
 4. O que nenhuma regra conhece vai para **Revisar**. Ao confirmar com "lembrar", vira regra e é aplicado nos outros pendentes iguais.
+
+## Importar extratos de conta (PDF)
+
+Em **Importar › Extrato de conta**, escolha a conta e um ou vários PDFs (vários meses de uma vez).
+O banco é reconhecido pelo conteúdo: Itaú ("Extrato conta corrente") e Santander ("Extrato Consolidado Inteligente").
+
+- **Conferência:** saldo do dia anterior + movimentos = saldo informado pelo banco, dia a dia.
+- **Pix e TED para vocês mesmos viram transferência.** O nome do titular de cada extrato é aprendido sozinho;
+  outros nomes (como o do cônjuge) ficam em **Mais › Nomes nos bancos**. Abreviações ("FULANO B S SOUZA") e nomes cortados são reconhecidos.
+- **Salário e rendimento** entram como receita. **Pagamento de fatura, aplicação e resgate** entram como transferência.
+- **Transferências entre contas** importadas de arquivos diferentes (Pix que sai de uma e entra na outra, pagamento
+  de fatura na conta e no cartão) são ligadas automaticamente.
+- **Caixinha:** conta marcada como "Caixinha de terceiros" (futebol, vaquinha) aparece na lista, mas fica fora dos totais.
+- PDF que é imagem (impressão de tela) não tem texto e é recusado com uma explicação.
 
 ## Rodar localmente
 

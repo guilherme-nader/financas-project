@@ -8,6 +8,7 @@ import { usuarioAtual } from "@/lib/dal";
 const ITENS = [
   { href: "/contas", titulo: "Contas", texto: "Contas correntes, cartões e investimentos" },
   { href: "/categorias", titulo: "Categorias", texto: "Organize onde o dinheiro vai" },
+  { href: "/pessoas", titulo: "Nomes nos bancos", texto: "Para reconhecer Pix entre as contas de vocês" },
 ];
 
 export default function PaginaMais() {

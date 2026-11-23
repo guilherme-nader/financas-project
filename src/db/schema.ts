@@ -40,6 +40,11 @@ export const pessoas = pgTable("pessoas", {
   cor: text("cor").notNull(),
   compartilhada: boolean("compartilhada").notNull().default(false),
   ordem: smallint("ordem").notNull().default(0),
+  /** Como o nome aparece nos extratos ("FULANO B S SOUZA"): Pix para esses nomes é transferência. */
+  nomesNoBanco: text("nomes_no_banco")
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`),
 });
 
 export const usuarios = pgTable("usuarios", {
@@ -67,6 +72,8 @@ export const contas = pgTable("contas", {
   /** Só para cartão: conta corrente que normalmente paga a fatura. */
   contaPagamentoId: uuid("conta_pagamento_id").references((): AnyPgColumn => contas.id),
   saldoInicialCentavos: integer("saldo_inicial_centavos").notNull().default(0),
+  /** Caixinha de terceiros (futebol, vaquinha): aparece na lista, mas fora dos totais do casal. */
+  foraDosTotais: boolean("fora_dos_totais").notNull().default(false),
   ativa: boolean("ativa").notNull().default(true),
   criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
 });

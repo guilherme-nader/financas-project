@@ -12,7 +12,7 @@ const ABAS = [
   { href: "/mais", rotulo: "Mais", Icone: IconeMenu },
 ];
 
-const SOB_MAIS = ["/mais", "/contas", "/categorias"];
+const SOB_MAIS = ["/mais", "/contas", "/categorias", "/pessoas"];
 
 /** Lê a URL atual para destacar a aba certa. */
 export function Navegacao() {

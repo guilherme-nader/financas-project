@@ -7,6 +7,11 @@ import { exigirUsuario } from "@/lib/dal";
 import { ehDataValida } from "@/lib/datas";
 import { ErroDeFormato, lerFaturaXpCsv } from "@/lib/importacao/fatura-xp-csv";
 import { gravarFatura, type ResumoImportacao } from "@/lib/importacao/gravar-fatura";
+import { gravarExtrato, type ResumoExtrato } from "@/lib/importacao/gravar-extrato";
+import type { ExtratoLido } from "@/lib/importacao/extrato";
+import { lerExtratoItau, type ItemDeTexto } from "@/lib/importacao/extrato-itau-pdf";
+import { lerExtratoSantander } from "@/lib/importacao/extrato-santander-pdf";
+import { itensDoPdf } from "@/lib/importacao/pdf";
 
 export type EstadoImportacao = {
   erro?: string;
@@ -45,4 +50,65 @@ export async function importarFatura(_anterior: EstadoImportacao, form: FormData
     usuarioId: usuario.id,
   });
   return { resumo: { ...resumo, contaNome: conta.nome, arquivoNome: arquivo.name, vencimento } };
+}
+
+export type EstadoImportacaoExtrato = {
+  erro?: string;
+  contaNome?: string;
+  resultados?: (ResumoExtrato & { arquivoNome: string; titular: string | null })[];
+  falhas?: { arquivoNome: string; motivo: string }[];
+};
+
+const MAX_ARQUIVOS = 24;
+
+/** Recebe um ou vários PDFs de extrato da mesma conta e importa em ordem cronológica. */
+export async function importarExtratos(
+  _anterior: EstadoImportacaoExtrato,
+  form: FormData,
+): Promise<EstadoImportacaoExtrato> {
+  const usuario = await exigirUsuario();
+  const contaId = String(form.get("contaId") ?? "");
+  const arquivos = form.getAll("arquivos").filter((a): a is File => a instanceof File && a.size > 0);
+
+  if (arquivos.length === 0) return { erro: "Escolha o(s) extrato(s) em PDF." };
+  if (arquivos.length > MAX_ARQUIVOS) return { erro: `Mande até ${MAX_ARQUIVOS} arquivos por vez.` };
+
+  const conta = await db.query.contas.findFirst({ where: eq(contas.id, contaId) });
+  if (!conta || conta.tipo === "cartao") return { erro: "Escolha a conta corrente ou de investimento do extrato." };
+
+  const lidos: { arquivoNome: string; extrato: ExtratoLido }[] = [];
+  const falhas: NonNullable<EstadoImportacaoExtrato["falhas"]> = [];
+  for (const arquivo of arquivos) {
+    try {
+      const itens = await itensDoPdf(new Uint8Array(await arquivo.arrayBuffer()));
+      if (itens.length === 0) {
+        falhas.push({
+          arquivoNome: arquivo.name,
+          motivo: "O PDF não tem texto (é uma imagem). Baixe o extrato pelo app ou site do banco, sem imprimir a tela.",
+        });
+        continue;
+      }
+      lidos.push({ arquivoNome: arquivo.name, extrato: lerExtrato(itens) });
+    } catch (erro) {
+      if (erro instanceof ErroDeFormato) falhas.push({ arquivoNome: arquivo.name, motivo: erro.message });
+      else falhas.push({ arquivoNome: arquivo.name, motivo: "Não foi possível ler este PDF." });
+    }
+  }
+
+  lidos.sort((a, b) => (a.extrato.periodo?.inicio ?? "").localeCompare(b.extrato.periodo?.inicio ?? ""));
+  const resultados: NonNullable<EstadoImportacaoExtrato["resultados"]> = [];
+  for (const { arquivoNome, extrato } of lidos) {
+    // Relê a conta: o saldo inicial pode ter sido ajustado pelo arquivo anterior.
+    const atual = (await db.query.contas.findFirst({ where: eq(contas.id, conta.id) }))!;
+    const resumo = await gravarExtrato({ conta: atual, extrato, arquivoNome, usuarioId: usuario.id });
+    resultados.push({ ...resumo, arquivoNome, titular: extrato.titular });
+  }
+  return { contaNome: conta.nome, resultados, falhas };
+}
+
+/** Descobre o banco pelo conteúdo do PDF. */
+function lerExtrato(itens: ItemDeTexto[]): ExtratoLido {
+  if (itens.some((i) => /EXTRATO CONSOLIDADO INTELIGENTE/i.test(i.texto))) return lerExtratoSantander(itens);
+  if (itens.some((i) => /Extrato conta corrente/i.test(i.texto))) return lerExtratoItau(itens);
+  throw new ErroDeFormato("Formato de extrato ainda não reconhecido. Por enquanto: Itaú (conta corrente) e Santander (extrato consolidado).");
 }

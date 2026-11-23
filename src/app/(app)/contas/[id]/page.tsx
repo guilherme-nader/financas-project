@@ -38,6 +38,7 @@ async function Conteudo({ params }: { params: PageProps<"/contas/[id]">["params"
           diaFechamento: conta.diaFechamento,
           diaVencimento: conta.diaVencimento,
           contaPagamentoId: conta.contaPagamentoId,
+          foraDosTotais: conta.foraDosTotais,
           saldoInicial: saldo ? `${saldo < 0 ? "-" : ""}${(Math.abs(saldo) / 100).toFixed(2).replace(".", ",")}` : "",
         }}
         pessoas={pessoas.map((p) => ({ id: p.id, nome: p.nome }))}

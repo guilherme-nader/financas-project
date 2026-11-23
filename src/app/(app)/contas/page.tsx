@@ -40,7 +40,7 @@ async function Conteudo({ searchParams }: { searchParams: PageProps<"/contas">["
   }
 
   // Cartões entram com o saldo negativo (quanto se deve hoje).
-  const patrimonio = contas.filter((c) => c.ativa).reduce((s, c) => s + c.saldoCentavos, 0);
+  const patrimonio = contas.filter((c) => c.ativa && !c.foraDosTotais).reduce((s, c) => s + c.saldoCentavos, 0);
 
   return (
     <>
@@ -85,6 +85,7 @@ function LinhaConta({ conta: c }: { conta: ContaComSaldo }) {
         <span className="truncate text-sm font-semibold">
           {c.nome}
           {!c.ativa && <span className="ml-2 text-xs font-medium text-suave">(desativada)</span>}
+          {c.foraDosTotais && <span className="ml-2 text-xs font-medium text-suave">(caixinha, fora dos totais)</span>}
         </span>
         <span className="text-xs text-suave">
           {c.instituicao} · <span className={`font-semibold ${pessoa.texto}`}>{c.pessoaNome}</span>

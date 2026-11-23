@@ -73,3 +73,26 @@ export async function confirmarRevisao(id: string, _anterior: EstadoRevisao, for
   refresh();
   return { aplicadaEmOutras };
 }
+
+const esquemaLote = z.object({
+  categoriaId: z.string().uuid(),
+  ids: z.array(z.string().uuid()).min(1).max(500),
+});
+
+/** Categoriza vários pendentes de uma vez (ex.: os Pix de presentes de casamento do mesmo dia). */
+export async function confirmarRevisaoEmLote(ids: string[], _anterior: EstadoRevisao, form: FormData): Promise<EstadoRevisao> {
+  await exigirUsuario();
+  const dados = esquemaLote.safeParse({ categoriaId: form.get("categoriaId"), ids });
+  if (!dados.success) return { erro: "Escolha uma categoria." };
+
+  const categoria = await db.query.categorias.findFirst({ where: eq(categorias.id, dados.data.categoriaId) });
+  if (!categoria) return { erro: "Categoria inválida." };
+  const atualizados = await db
+    .update(transacoes)
+    .set({ categoriaId: categoria.id, precisaRevisao: false, atualizadoEm: new Date() })
+    .where(and(inArray(transacoes.id, dados.data.ids), eq(transacoes.tipo, categoria.tipo), eq(transacoes.precisaRevisao, true)))
+    .returning({ id: transacoes.id });
+  if (atualizados.length === 0) return { erro: "Essa categoria não é do tipo destes lançamentos." };
+  refresh();
+  return { aplicadaEmOutras: atualizados.length };
+}

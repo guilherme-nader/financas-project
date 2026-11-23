@@ -29,6 +29,7 @@ async function Conteudo() {
         diaVencimento: null,
         contaPagamentoId: null,
         saldoInicial: "",
+        foraDosTotais: false,
       }}
       pessoas={pessoas.map((p) => ({ id: p.id, nome: p.nome }))}
       contasCorrentes={contas.filter((c) => c.tipo === "corrente").map((c) => ({ id: c.id, nome: c.nome }))}

@@ -17,6 +17,7 @@ type Inicial = {
   diaVencimento: number | null;
   contaPagamentoId: string | null;
   saldoInicial: string;
+  foraDosTotais: boolean;
 };
 
 const TIPOS: { valor: Tipo; rotulo: string; dica: string }[] = [
@@ -162,6 +163,24 @@ export function FormularioConta({
             />
           </Campo>
         )}
+      </div>
+
+      <div className="flex items-start gap-3 rounded-[20px] bg-cartao p-5 text-sm">
+        <input
+          id="foraDosTotais"
+          name="foraDosTotais"
+          type="checkbox"
+          value="sim"
+          defaultChecked={inicial.foraDosTotais}
+          className="mt-0.5 h-5 w-5 accent-marca"
+        />
+        <label htmlFor="foraDosTotais" className="flex flex-col gap-0.5">
+          <span className="font-semibold">Caixinha de terceiros</span>
+          <span className="text-xs text-suave">
+            Para contas que só repassam dinheiro de outras pessoas (futebol, vaquinha). Os lançamentos aparecem na
+            lista, mas ficam fora dos totais, do saldo e do patrimônio do casal, e não pedem revisão.
+          </span>
+        </label>
       </div>
 
       <AvisoErro mensagem={estado.erro} />

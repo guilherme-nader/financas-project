@@ -126,7 +126,9 @@ const categoriaPai = alias(categorias, "categoria_pai");
 /** Resumo do mês pela data da compra (onde o dinheiro foi), sem transferências. */
 export async function resumoDoMes(mes: MesISO) {
   await exigirUsuario();
+  // Contas marcadas como caixinha de terceiros ficam fora do resumo do casal.
   const noMes = and(
+    eq(contas.foraDosTotais, false),
     gte(transacoes.data, primeiroDia(mes)),
     lte(transacoes.data, ultimoDia(mes)),
     ne(transacoes.tipo, "transferencia"),
@@ -139,6 +141,7 @@ export async function resumoDoMes(mes: MesISO) {
       paraRevisar: sql<number>`count(*) filter (where ${transacoes.precisaRevisao})`.mapWith(Number),
     })
     .from(transacoes)
+    .innerJoin(contas, eq(contas.id, transacoes.contaId))
     .where(noMes);
 
   const grupoId = sql<string | null>`coalesce(${categoriaPai.id}, ${categorias.id})`;
@@ -150,6 +153,7 @@ export async function resumoDoMes(mes: MesISO) {
       totalCentavos: somaInt(sql`-sum(${transacoes.valorCentavos})`),
     })
     .from(transacoes)
+    .innerJoin(contas, eq(contas.id, transacoes.contaId))
     .leftJoin(categorias, eq(categorias.id, transacoes.categoriaId))
     .leftJoin(categoriaPai, eq(categoriaPai.id, categorias.paiId))
     .where(and(noMes, eq(transacoes.tipo, "despesa")))
@@ -164,6 +168,7 @@ export async function resumoDoMes(mes: MesISO) {
       totalCentavos: somaInt(sql`-sum(${transacoes.valorCentavos})`),
     })
     .from(transacoes)
+    .innerJoin(contas, eq(contas.id, transacoes.contaId))
     .innerJoin(pessoas, eq(pessoas.id, transacoes.pessoaId))
     .where(and(noMes, eq(transacoes.tipo, "despesa")))
     .groupBy(pessoas.id)
@@ -198,6 +203,7 @@ export async function listarLancamentos(mes: MesISO, filtro: { pessoaId?: string
       precisaRevisao: transacoes.precisaRevisao,
       contaNome: contas.nome,
       contaTipo: contas.tipo,
+      foraDosTotais: contas.foraDosTotais,
       categoriaNome: categorias.nome,
       categoriaPaiNome: categoriaPai.nome,
       pessoaId: pessoas.id,

@@ -29,6 +29,7 @@ const esquema = z.object({
     .transform((v) => (v ? v : null))
     .pipe(z.string().uuid().nullable()),
   saldoInicial: z.string().optional(),
+  foraDosTotais: z.string().optional(),
 });
 
 /** Saldo inicial pode ser negativo (cheque especial): aceita "-" na frente. */
@@ -79,6 +80,7 @@ export async function salvarConta(
     diaVencimento: ehCartao ? d.diaVencimento : null,
     contaPagamentoId: ehCartao ? d.contaPagamentoId : null,
     saldoInicialCentavos,
+    foraDosTotais: d.foraDosTotais === "sim",
   };
 
   if (id) {

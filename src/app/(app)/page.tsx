@@ -29,7 +29,7 @@ async function Conteudo({ searchParams }: { searchParams: PageProps<"/">["search
     contarParaRevisar(),
   ]);
   const saldoContas = contas
-    .filter((c) => c.tipo !== "cartao")
+    .filter((c) => c.tipo !== "cartao" && !c.foraDosTotais)
     .reduce((soma, c) => soma + c.saldoCentavos, 0);
   const cartoes = contas.filter((c) => c.tipo === "cartao" && c.faturaAberta);
   const maiorCategoria = resumo.porCategoria[0]?.totalCentavos ?? 0;

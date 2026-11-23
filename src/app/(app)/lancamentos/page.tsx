@@ -102,8 +102,9 @@ async function Conteudo({ searchParams }: { searchParams: PageProps<"/lancamento
 function ItemDaLista({ item }: { item: ItemLancamento }) {
   const pessoa = estiloPessoa(item.pessoaCor);
   const categoria = item.categoriaPaiNome ? `${item.categoriaPaiNome} › ${item.categoriaNome}` : item.categoriaNome;
-  const detalhes =
-    item.tipo === "transferencia"
+  const detalhes = item.foraDosTotais
+    ? [item.contaNome, "caixinha · fora dos totais"]
+    : item.tipo === "transferencia"
       ? [item.contaNome, "fora dos totais"]
       : [
           categoria ?? "Sem categoria",
