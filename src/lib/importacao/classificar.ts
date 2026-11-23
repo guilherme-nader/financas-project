@@ -71,6 +71,12 @@ export function classificarMovimento(
   if (/PAGAMENTO DE FATURA|PAGTO FATURA|PAG FATURA|FATURA CARTAO/.test(tudo)) {
     return { tipo: "transferencia", categoriaNome: "Pagamento de fatura", regra: null, descricao: "Pagamento de fatura", precisaRevisao: false };
   }
+  // XP: "Transferência enviada para a conta investimento" / "recebida da conta investimento".
+  if (/CONTA ?INVESTIMENTO/.test(tudo)) {
+    return entrada
+      ? { tipo: "transferencia", categoriaNome: "Resgate de investimento", regra: null, descricao: "Resgate da conta investimento", precisaRevisao: false }
+      : { tipo: "transferencia", categoriaNome: "Aporte em investimento", regra: null, descricao: "Aplicação na conta investimento", precisaRevisao: false };
+  }
   if (/APLICACAO|APLIC\b/.test(tudo) && !entrada) {
     return { tipo: "transferencia", categoriaNome: "Aporte em investimento", regra: null, descricao: "Aplicação", precisaRevisao: false };
   }

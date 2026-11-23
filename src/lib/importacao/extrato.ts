@@ -15,7 +15,7 @@ export type MovimentoExtrato = {
 };
 
 export type ExtratoLido = {
-  banco: "itau" | "santander" | "nubank" | "ofx";
+  banco: "itau" | "santander" | "nubank" | "ofx" | "xp";
   titular: string | null;
   agencia: string | null;
   conta: string | null;

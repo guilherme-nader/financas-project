@@ -53,3 +53,6 @@ next-env.d.ts
 /dados/
 /uploads/
 !.env.example
+
+# arquivos do OCR copiados de node_modules no build
+/public/ocr/

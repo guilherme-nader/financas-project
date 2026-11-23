@@ -15,6 +15,8 @@ import { itensDoPdf } from "@/lib/importacao/pdf";
 import { ehFaturaNubank, lerFaturaNubank } from "@/lib/importacao/fatura-nubank-pdf";
 import { linhasDoPdf } from "@/lib/importacao/linhas-pdf";
 import { decodificarOfx, lerExtratoNubankCsv, lerOfx } from "@/lib/importacao/ofx";
+import { lerExtratoXpOcr } from "@/lib/importacao/extrato-xp-ocr";
+import { z } from "zod";
 
 export type EstadoImportacao = {
   erro?: string;
@@ -84,8 +86,10 @@ export async function importarExtratos(
   const usuario = await exigirUsuario();
   const contaId = String(form.get("contaId") ?? "");
   const arquivos = form.getAll("arquivos").filter((a): a is File => a instanceof File && a.size > 0);
+  // PDFs que são imagem chegam já lidos por OCR no navegador (só o texto).
+  const lidosPorOcr = form.getAll("ocr").map((t) => esquemaOcr.safeParse(safeJson(String(t))));
 
-  if (arquivos.length === 0) return { erro: "Escolha o(s) extrato(s): OFX, CSV do Nubank ou PDF." };
+  if (arquivos.length === 0 && lidosPorOcr.length === 0) return { erro: "Escolha o(s) extrato(s): OFX, CSV do Nubank ou PDF." };
   if (arquivos.length > MAX_ARQUIVOS) return { erro: `Mande até ${MAX_ARQUIVOS} arquivos por vez.` };
 
   const conta = await db.query.contas.findFirst({ where: eq(contas.id, contaId) });
@@ -108,7 +112,7 @@ export async function importarExtratos(
       if (itens.length === 0) {
         falhas.push({
           arquivoNome: arquivo.name,
-          motivo: "O PDF não tem texto (é uma imagem). Baixe o extrato pelo app ou site do banco, sem imprimir a tela.",
+          motivo: "O PDF não tem texto (é uma imagem) e a leitura por OCR no navegador não rodou. Tente de novo.",
         });
         continue;
       }
@@ -116,6 +120,18 @@ export async function importarExtratos(
     } catch (erro) {
       if (erro instanceof ErroDeFormato) falhas.push({ arquivoNome: arquivo.name, motivo: erro.message });
       else falhas.push({ arquivoNome: arquivo.name, motivo: "Não foi possível ler este PDF." });
+    }
+  }
+
+  for (const r of lidosPorOcr) {
+    if (!r.success) {
+      falhas.push({ arquivoNome: "?", motivo: "Texto lido por OCR inválido." });
+      continue;
+    }
+    try {
+      lidos.push({ arquivoNome: r.data.arquivoNome, extrato: lerExtratoXpOcr(r.data.linhas) });
+    } catch (erro) {
+      falhas.push({ arquivoNome: r.data.arquivoNome, motivo: erro instanceof ErroDeFormato ? erro.message : "Não foi possível ler o texto." });
     }
   }
 
@@ -128,6 +144,19 @@ export async function importarExtratos(
     resultados.push({ ...resumo, arquivoNome, titular: extrato.titular });
   }
   return { contaNome: conta.nome, resultados, falhas };
+}
+
+const esquemaOcr = z.object({
+  arquivoNome: z.string().max(200),
+  linhas: z.array(z.string().max(500)).max(10_000),
+});
+
+function safeJson(texto: string): unknown {
+  try {
+    return JSON.parse(texto);
+  } catch {
+    return null;
+  }
 }
 
 /** Descobre o banco pelo conteúdo do PDF. */

@@ -7,22 +7,50 @@ import { AvisoErro, Campo, classeEntrada } from "@/componentes/campos";
 import { IconeEnviar } from "@/componentes/icones";
 import { dataBR } from "@/lib/datas";
 import { formatarCentavos } from "@/lib/dinheiro";
+import { lerPdfPorOcr, pdfTemTexto } from "@/lib/ocr-navegador";
 
 type Conta = { id: string; nome: string };
 
-const NOME_BANCO = { itau: "Itaú", santander: "Santander", nubank: "Nubank", ofx: "OFX" } as const;
+const NOME_BANCO = { itau: "Itaú", santander: "Santander", nubank: "Nubank", ofx: "OFX", xp: "XP (lido por OCR)" } as const;
 
 export function FormularioExtrato({ contas }: { contas: Conta[] }) {
   const [rodada, setRodada] = useState(0);
+  const [progresso, setProgresso] = useState<string | null>(null);
   const [estado, acao, enviando] = useActionState<EstadoImportacaoExtrato, FormData>(async (anterior, form) => {
-    const r = await importarExtratos(anterior, form);
-    if (r.resultados?.length) setRodada((n) => n + 1);
-    return r;
+    // PDF que é imagem (extrato da XP) é lido aqui no navegador; só o texto vai para o servidor.
+    const envio = new FormData();
+    envio.set("contaId", String(form.get("contaId") ?? ""));
+    try {
+      for (const arquivo of form.getAll("arquivos")) {
+        if (!(arquivo instanceof File) || arquivo.size === 0) continue;
+        const ehPdf = arquivo.type === "application/pdf" || /\.pdf$/i.test(arquivo.name);
+        if (ehPdf && !(await pdfTemTexto(arquivo))) {
+          const linhas = await lerPdfPorOcr(arquivo, (p) =>
+            setProgresso(
+              p.etapa === "preparando"
+                ? `Preparando a leitura de ${arquivo.name}…`
+                : `Lendo ${arquivo.name}: página ${p.pagina} de ${p.paginas}…`,
+            ),
+          );
+          envio.append("ocr", JSON.stringify({ arquivoNome: arquivo.name, linhas }));
+        } else {
+          envio.append("arquivos", arquivo);
+        }
+      }
+      setProgresso("Importando…");
+      const r = await importarExtratos(anterior, envio);
+      if (r.resultados?.length) setRodada((n) => n + 1);
+      return r;
+    } catch {
+      return { erro: "Não foi possível ler um dos arquivos neste aparelho. Tente de novo ou use outro navegador." };
+    } finally {
+      setProgresso(null);
+    }
   }, {});
 
   return (
     <div className="flex flex-col gap-5">
-      <Campos key={rodada} contas={contas} acao={acao} enviando={enviando} erro={estado.erro} />
+      <Campos key={rodada} contas={contas} acao={acao} enviando={enviando} erro={estado.erro} progresso={progresso} />
       {(estado.resultados?.length || estado.falhas?.length) && <Resultado estado={estado} />}
     </div>
   );
@@ -33,11 +61,13 @@ function Campos({
   acao,
   enviando,
   erro,
+  progresso,
 }: {
   contas: Conta[];
   acao: (form: FormData) => void;
   enviando: boolean;
   erro?: string;
+  progresso: string | null;
 }) {
   const [nomes, setNomes] = useState<string[]>([]);
   return (
@@ -53,7 +83,8 @@ function Campos({
           {nomes.length === 0 ? "Escolher extrato(s)" : nomes.length === 1 ? nomes[0] : `${nomes.length} arquivos`}
         </span>
         <span className="text-[13px] text-suave">
-          OFX (qualquer banco), CSV do Nubank, ou PDF do Itaú e do Santander. Pode mandar vários de uma vez.
+          OFX (qualquer banco), CSV do Nubank, PDF do Itaú e do Santander, ou o PDF da conta XP (lido por OCR aqui
+          no aparelho). Pode mandar vários de uma vez.
         </span>
         <input
           id="arquivos"
@@ -85,13 +116,20 @@ function Campos({
       >
         {enviando ? "Lendo os extratos…" : "Importar extrato"}
       </button>
+      {progresso && (
+        <p role="status" className="text-center text-sm text-suave">
+          {progresso}
+        </p>
+      )}
     </form>
   );
 }
 
 function Resultado({ estado }: { estado: EstadoImportacaoExtrato }) {
   const r = estado.resultados ?? [];
-  const soma = (k: "novas" | "duplicadas" | "transferenciasProprias" | "naCaixinha" | "pareadas" | "categorizadas" | "paraRevisar" | "reclassificadas") =>
+  const soma = (
+    k: "novas" | "duplicadas" | "transferenciasProprias" | "naCaixinha" | "pareadas" | "categorizadas" | "paraRevisar" | "reclassificadas" | "suspeitos",
+  ) =>
     r.reduce((s, x) => s + x[k], 0);
   const naoBatem = r.flatMap((x) => x.diasQueNaoBatem.map((d) => ({ ...d, arquivo: x.arquivoNome })));
   const paraRevisar = soma("paraRevisar");
@@ -118,6 +156,7 @@ function Resultado({ estado }: { estado: EstadoImportacaoExtrato }) {
             <Numero n={soma("pareadas")} cor="text-tinta" texto="transferências ligadas ao outro lado (outra conta ou cartão)" />
             <Numero n={soma("reclassificadas")} cor="text-marca" texto="Pix de importações anteriores reconhecidos agora como transferência" />
             <Numero n={paraRevisar} cor="text-alerta" texto="precisam da sua confirmação" />
+            <Numero n={soma("suspeitos")} cor="text-alerta" texto="lidos por OCR com valor a conferir (estão no Revisar)" />
             <Numero n={soma("duplicadas")} cor="text-suave" texto="já estavam importados (ignorados)" />
           </ul>
           {naoBatem.length === 0 ? (

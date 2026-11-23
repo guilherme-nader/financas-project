@@ -19,6 +19,8 @@ export type ResumoExtrato = {
   transferenciasProprias: number;
   /** Pendentes de importações anteriores que viraram transferência com os nomes aprendidos agora. */
   reclassificadas: number;
+  /** Linhas lidas por OCR cujo valor não fechou com o saldo (vão para Revisar). */
+  suspeitos: number;
   /** Lançamentos de conta caixinha (fora dos totais). */
   naCaixinha: number;
   pareadas: number;
@@ -30,7 +32,7 @@ export type ResumoExtrato = {
 
 export async function gravarExtrato(params: {
   conta: Conta;
-  extrato: ExtratoLido;
+  extrato: ExtratoLido & { suspeitos?: number[] };
   arquivoNome: string;
   usuarioId: string;
 }): Promise<ResumoExtrato> {
@@ -62,6 +64,7 @@ export async function gravarExtrato(params: {
     transferenciasProprias: 0,
     naCaixinha: 0,
     reclassificadas: 0,
+    suspeitos: 0,
     pareadas: 0,
     categorizadas: 0,
     paraRevisar: 0,
@@ -97,7 +100,8 @@ export async function gravarExtrato(params: {
     }
 
     const ocorrencias = new Map<string, number>();
-    for (const m of extrato.movimentos) {
+    const suspeitos = new Set(extrato.suspeitos ?? []);
+    for (const [indice, m] of extrato.movimentos.entries()) {
       // Com identificador do banco (OFX/CSV Nubank), ele é a chave; senão, data+texto+valor+ordem.
       const base = m.idBanco
         ? `id|${m.idBanco}`
@@ -130,6 +134,12 @@ export async function gravarExtrato(params: {
       }
       // Caixinha de terceiros não pede revisão: não entra nos totais do casal.
       if (conta.foraDosTotais) precisaRevisao = false;
+      // Valor lido por OCR que não fechou com o saldo: sempre pede conferência.
+      const suspeito = suspeitos.has(indice);
+      if (suspeito) {
+        precisaRevisao = true;
+        resumo.suspeitos++;
+      }
 
       await tx.insert(transacoes).values({
         contaId: conta.id,
@@ -145,6 +155,7 @@ export async function gravarExtrato(params: {
         status: "realizada",
         origem: "importacao",
         precisaRevisao,
+        observacao: suspeito ? "Lido por OCR: o valor não fechou com o saldo do extrato. Confira no PDF." : null,
         importacaoId: importacao.id,
         chaveImportacao: chave,
         criadoPorId: params.usuarioId,

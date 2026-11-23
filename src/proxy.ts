@@ -31,5 +31,5 @@ async function tokenValido(token: string): Promise<boolean> {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon|apple-icon|manifest).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon|apple-icon|manifest|ocr/).*)"],
 };

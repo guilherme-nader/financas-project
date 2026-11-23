@@ -10,7 +10,7 @@ e os extratos do mês e o sistema organiza o resto.
 | 1. Base | Login dos dois, contas (corrente, cartão, investimento), categorias, lançamento manual com parcelas e transferências, resumo do mês | ✅ pronta |
 | 2. Histórico | Importar as planilhas "Planejamento oficial" e a planilha-modelo | próxima |
 | 3. Projeção | Recorrências (financiamento, condomínio, salários) e a visão meses × contas | |
-| 4. Importação | ✅ Faturas: XP (CSV) e Nubank (PDF) · ✅ Extratos: OFX de qualquer banco, CSV do Nubank, PDF do Itaú e do Santander · ✅ Regras, Revisar (um a um ou em grupo), transferências ligadas sozinhas · ⏳ conta XP (PDF em imagem, OCR), IA gratuita (Groq) | em andamento |
+| 4. Importação | ✅ Faturas: XP (CSV) e Nubank (PDF) · ✅ Extratos: OFX de qualquer banco, CSV do Nubank, PDF do Itaú e do Santander, PDF da conta XP (imagem, lido por OCR no navegador) · ✅ Regras, Revisar (um a um ou em grupo), transferências ligadas sozinhas · ⏳ IA gratuita (Groq) | em andamento |
 | 5. Orçamento e metas | Limites por categoria e metas com progresso | |
 
 ## Como o dinheiro é contado
@@ -45,6 +45,7 @@ Em **Importar › Extrato de conta**, escolha a conta e um ou vários arquivos:
 | **OFX** (recomendado) | Nubank e a maioria dos bancos | cada lançamento tem identificador do banco; nunca duplica |
 | CSV | Nubank | mesmo identificador do OFX (dá para alternar entre os dois) |
 | PDF | Itaú ("Extrato conta corrente"), Santander ("Extrato Consolidado Inteligente") | vários meses de uma vez |
+| PDF em imagem | Conta XP (impressão do portal) | lido por **OCR no próprio navegador**: a imagem não sai do aparelho, só o texto vai ao servidor. Cada linha é conferida pela coluna de saldo; o que não fecha vai para Revisar com aviso |
 
 Faturas: **XP em CSV** (vencimento pelo nome do arquivo) e **Nubank em PDF** (vencimento e valor lidos do documento;
 compras em moeda estrangeira, IOF, estornos e parcelas tratados; total conferido com o valor impresso).
@@ -58,6 +59,13 @@ compras em moeda estrangeira, IOF, estornos e parcelas tratados; total conferido
   de fatura na conta e no cartão) são ligadas automaticamente.
 - **Caixinha:** conta marcada como "Caixinha de terceiros" (futebol, vaquinha) aparece na lista, mas fica fora dos totais.
 - PDF que é imagem (impressão de tela) não tem texto e é recusado com uma explicação.
+
+## OCR (extrato da conta XP)
+
+O PDF da XP é uma imagem. O navegador renderiza cada página, converte para preto e branco (as listras cinzas da
+tabela atrapalham) e lê com [tesseract.js](https://github.com/naptha/tesseract.js) em português. Os arquivos do
+OCR (~32 MB) são copiados de `node_modules` para `public/ocr` no `dev`/`build` (`npm run ocr:copiar`) e servidos
+pelo próprio app; nenhum serviço externo é chamado.
 
 ## Rodar localmente
 
