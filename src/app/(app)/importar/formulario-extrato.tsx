@@ -11,7 +11,7 @@ import { lerPdfPorOcr, pdfTemTexto } from "@/lib/ocr-navegador";
 
 type Conta = { id: string; nome: string };
 
-const NOME_BANCO = { itau: "Itaú", santander: "Santander", nubank: "Nubank", ofx: "OFX", xp: "XP (lido por OCR)" } as const;
+const NOME_BANCO = { itau: "Itaú", santander: "Santander", nubank: "Nubank", ofx: "OFX", xp: "XP (lido por OCR)", wise: "Conta Global (convertida pela PTAX)" } as const;
 
 export function FormularioExtrato({ contas }: { contas: Conta[] }) {
   const [rodada, setRodada] = useState(0);
@@ -83,8 +83,8 @@ function Campos({
           {nomes.length === 0 ? "Escolher extrato(s)" : nomes.length === 1 ? nomes[0] : `${nomes.length} arquivos`}
         </span>
         <span className="text-[13px] text-suave">
-          OFX (qualquer banco), CSV do Nubank, PDF do Itaú e do Santander, ou o PDF da conta XP (lido por OCR aqui
-          no aparelho). Pode mandar vários de uma vez.
+          OFX (qualquer banco), CSV do Nubank, PDF do Itaú, do Santander e da Conta Global (Wise), ou o PDF da
+          conta XP (lido por OCR aqui no aparelho). Pode mandar vários de uma vez.
         </span>
         <input
           id="arquivos"
@@ -159,7 +159,11 @@ function Resultado({ estado }: { estado: EstadoImportacaoExtrato }) {
             <Numero n={soma("suspeitos")} cor="text-alerta" texto="lidos por OCR com valor a conferir (estão no Revisar)" />
             <Numero n={soma("duplicadas")} cor="text-suave" texto="já estavam importados (ignorados)" />
           </ul>
-          {naoBatem.length === 0 ? (
+          {!r.some((x) => x.saldoConferivel) ? (
+            <p className="text-xs text-suave">
+              Este formato não traz saldos dia a dia; a proteção contra duplicados vem do identificador de cada lançamento.
+            </p>
+          ) : naoBatem.length === 0 ? (
             <p className="rounded-xl bg-marca-clara px-3.5 py-2.5 text-sm font-medium text-marca-escura">
               ✓ Saldo conferido dia a dia: tudo bate com o que o banco informa.
             </p>

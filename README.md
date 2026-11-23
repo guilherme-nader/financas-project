@@ -45,6 +45,7 @@ Em **Importar › Extrato de conta**, escolha a conta e um ou vários arquivos:
 | **OFX** (recomendado) | Nubank e a maioria dos bancos | cada lançamento tem identificador do banco; nunca duplica |
 | CSV | Nubank | mesmo identificador do OFX (dá para alternar entre os dois) |
 | PDF | Itaú ("Extrato conta corrente"), Santander ("Extrato Consolidado Inteligente") | vários meses de uma vez |
+| PDF | Conta Global XP / Wise ("Extrato Wise") | valores em moeda estrangeira **convertidos pela PTAX de venda do dia** (Banco Central); a observação de cada lançamento guarda o valor original e a cotação |
 | PDF em imagem | Conta XP (impressão do portal) | lido por **OCR no próprio navegador**: a imagem não sai do aparelho, só o texto vai ao servidor. Cada linha é conferida pela coluna de saldo; o que não fecha vai para Revisar com aviso |
 
 Faturas: **XP em CSV** (vencimento pelo nome do arquivo) e **Nubank em PDF** (vencimento e valor lidos do documento;
@@ -58,7 +59,7 @@ compras em moeda estrangeira, IOF, estornos e parcelas tratados; total conferido
 - **Transferências entre contas** importadas de arquivos diferentes (Pix que sai de uma e entra na outra, pagamento
   de fatura na conta e no cartão) são ligadas automaticamente.
 - **Caixinha:** conta marcada como "Caixinha de terceiros" (futebol, vaquinha) aparece na lista, mas fica fora dos totais.
-- PDF que é imagem (impressão de tela) não tem texto e é recusado com uma explicação.
+- **Revisar** mostra primeiro os grupos (Pix de várias pessoas no mesmo dia, compras no exterior) e depois os avulsos, 30 por vez.
 
 ## OCR (extrato da conta XP)
 

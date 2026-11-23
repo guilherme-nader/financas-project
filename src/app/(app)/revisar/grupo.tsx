@@ -14,6 +14,8 @@ export function GrupoParaRevisar({ titulo, itens, categorias }: { titulo: string
   const [aberto, setAberto] = useState(false);
   const total = itens.reduce((s, i) => s + i.valorCentavos, 0);
   const idSelect = `lote-${ids[0]}`;
+  const datas = itens.map((i) => i.data).sort();
+  const periodo = datas[0] === datas.at(-1) ? dataCurta(datas[0]) : `${dataCurta(datas[0])} a ${dataCurta(datas.at(-1)!)}`;
 
   return (
     <article className="flex flex-col gap-3.5 rounded-[20px] border-[1.5px] border-alerta/30 bg-cartao p-4.5">
@@ -21,7 +23,7 @@ export function GrupoParaRevisar({ titulo, itens, categorias }: { titulo: string
         <div className="flex flex-col gap-1">
           <span className="text-sm font-semibold">{titulo}</span>
           <span className="text-xs text-suave">
-            {dataCurta(itens[0].data)} · {itens[0].contaNome} · {itens.length} lançamentos
+            {periodo} · {itens[0].contaNome} · {itens.length} lançamentos
           </span>
         </div>
         <span className="tabular text-base font-bold whitespace-nowrap">{formatarCentavos(total)}</span>

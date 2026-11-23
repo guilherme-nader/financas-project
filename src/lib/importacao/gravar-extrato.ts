@@ -27,6 +27,8 @@ export type ResumoExtrato = {
   categorizadas: number;
   paraRevisar: number;
   diasQueNaoBatem: ExtratoLido["diasQueNaoBatem"];
+  /** O extrato traz saldos diários suficientes para conferir? (OFX e Conta Global não trazem.) */
+  saldoConferivel: boolean;
   saldoInicialAjustado: number | null;
 };
 
@@ -69,6 +71,7 @@ export async function gravarExtrato(params: {
     categorizadas: 0,
     paraRevisar: 0,
     diasQueNaoBatem: extrato.diasQueNaoBatem,
+    saldoConferivel: extrato.saldosDoDia.length >= 2,
     saldoInicialAjustado: null,
   };
   const usoDeRegras = new Map<string, number>();
@@ -155,7 +158,7 @@ export async function gravarExtrato(params: {
         status: "realizada",
         origem: "importacao",
         precisaRevisao,
-        observacao: suspeito ? "Lido por OCR: o valor não fechou com o saldo do extrato. Confira no PDF." : null,
+        observacao: suspeito ? "Lido por OCR: o valor não fechou com o saldo do extrato. Confira no PDF." : (m.observacao ?? null),
         importacaoId: importacao.id,
         chaveImportacao: chave,
         criadoPorId: params.usuarioId,

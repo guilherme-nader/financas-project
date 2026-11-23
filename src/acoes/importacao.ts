@@ -16,6 +16,8 @@ import { ehFaturaNubank, lerFaturaNubank } from "@/lib/importacao/fatura-nubank-
 import { linhasDoPdf } from "@/lib/importacao/linhas-pdf";
 import { decodificarOfx, lerExtratoNubankCsv, lerOfx } from "@/lib/importacao/ofx";
 import { lerExtratoXpOcr } from "@/lib/importacao/extrato-xp-ocr";
+import { ehExtratoWise, lerExtratoWise } from "@/lib/importacao/extrato-wise-pdf";
+import { extratoWiseEmReais } from "@/lib/importacao/wise-em-reais";
 import { z } from "zod";
 
 export type EstadoImportacao = {
@@ -109,6 +111,11 @@ export async function importarExtratos(
         continue;
       }
       const itens = await itensDoPdf(bytes);
+      const linhasPdf = linhasDoPdf(itens);
+      if (ehExtratoWise(linhasPdf)) {
+        lidos.push({ arquivoNome: arquivo.name, extrato: await extratoWiseEmReais(lerExtratoWise(linhasPdf)) });
+        continue;
+      }
       if (itens.length === 0) {
         falhas.push({
           arquivoNome: arquivo.name,

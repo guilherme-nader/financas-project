@@ -12,10 +12,12 @@ export type MovimentoExtrato = {
   valorCentavos: number;
   /** Identificador do lançamento dado pelo banco (FITID do OFX), quando existe. */
   idBanco?: string | null;
+  /** Nota para o lançamento (ex.: valor original e cotação usada na conversão). */
+  observacao?: string;
 };
 
 export type ExtratoLido = {
-  banco: "itau" | "santander" | "nubank" | "ofx" | "xp";
+  banco: "itau" | "santander" | "nubank" | "ofx" | "xp" | "wise";
   titular: string | null;
   agencia: string | null;
   conta: string | null;

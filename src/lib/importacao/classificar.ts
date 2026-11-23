@@ -71,6 +71,10 @@ export function classificarMovimento(
   if (/PAGAMENTO DE FATURA|PAGTO FATURA|PAG FATURA|FATURA CARTAO/.test(tudo)) {
     return { tipo: "transferencia", categoriaNome: "Pagamento de fatura", regra: null, descricao: "Pagamento de fatura", precisaRevisao: false };
   }
+  // Dinheiro indo/voltando da conta global (câmbio) é transferência entre contas de vocês.
+  if (/TRANSFERENCIA PARA CONTA PROPRIA|LIQ\.? CAMBIO/.test(tudo)) {
+    return { tipo: "transferencia", categoriaNome: "Transferência entre contas", regra: null, descricao: entrada ? "Câmbio: volta da conta global" : "Câmbio: conta global", precisaRevisao: false };
+  }
   // XP: "Transferência enviada para a conta investimento" / "recebida da conta investimento".
   if (/CONTA ?INVESTIMENTO/.test(tudo)) {
     return entrada
