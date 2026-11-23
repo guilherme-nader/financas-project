@@ -1,12 +1,14 @@
 import "server-only";
-import { and, eq, lt, sql } from "drizzle-orm";
+import { and, eq, gte, isNull, lt, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { categorias, contas, importacoes, pessoas, regras, transacoes, type Conta } from "@/db/schema";
+import { acharLancadoAMao } from "./casar-manual";
 import { classificarMovimento, contraparteDe } from "./classificar";
 import type { ExtratoLido } from "./extrato";
 import { parearTransferencias } from "./parear";
 import { reclassificarPendentes } from "./reclassificar";
 import { ordenarRegras } from "./regras";
+import { somarDias } from "../datas";
 import { compacto } from "./texto";
 
 export type ResumoExtrato = {
@@ -16,6 +18,8 @@ export type ResumoExtrato = {
   movimentos: number;
   novas: number;
   duplicadas: number;
+  /** Lançamentos digitados à mão antes do extrato chegar, reconhecidos (não duplicados). */
+  jaLancadas: number;
   transferenciasProprias: number;
   /** Pendentes de importações anteriores que viraram transferência com os nomes aprendidos agora. */
   reclassificadas: number;
@@ -63,6 +67,7 @@ export async function gravarExtrato(params: {
     movimentos: extrato.movimentos.length,
     novas: 0,
     duplicadas: 0,
+    jaLancadas: 0,
     transferenciasProprias: 0,
     naCaixinha: 0,
     reclassificadas: 0,
@@ -102,6 +107,24 @@ export async function gravarExtrato(params: {
       }
     }
 
+    // Lançados à mão nesta conta, ainda sem par no banco (ex.: Pix registrado pelo print do app).
+    const manuais = extrato.periodo
+      ? await tx
+          .select({ id: transacoes.id, data: transacoes.data, valorCentavos: transacoes.valorCentavos })
+          .from(transacoes)
+          .where(
+            and(
+              eq(transacoes.contaId, conta.id),
+              eq(transacoes.origem, "manual"),
+              isNull(transacoes.chaveImportacao),
+              eq(transacoes.status, "realizada"),
+              gte(transacoes.data, somarDias(extrato.periodo.inicio, -3)),
+              lte(transacoes.data, somarDias(extrato.periodo.fim, 3)),
+            ),
+          )
+      : [];
+    const adotados = new Set<string>();
+
     const ocorrencias = new Map<string, number>();
     const suspeitos = new Set(extrato.suspeitos ?? []);
     for (const [indice, m] of extrato.movimentos.entries()) {
@@ -119,6 +142,25 @@ export async function gravarExtrato(params: {
       });
       if (existente) {
         resumo.duplicadas++;
+        continue;
+      }
+
+      const manual = acharLancadoAMao(manuais, m, adotados);
+      if (manual) {
+        adotados.add(manual.id);
+        await tx
+          .update(transacoes)
+          .set({
+            data: m.data,
+            dataCaixa: m.data,
+            descricaoOriginal: `${m.lancamento} ${m.descricao}`.trim(),
+            contraparte: contraparteDe(m),
+            importacaoId: importacao.id,
+            chaveImportacao: chave,
+            atualizadoEm: new Date(),
+          })
+          .where(eq(transacoes.id, manual.id));
+        resumo.jaLancadas++;
         continue;
       }
 

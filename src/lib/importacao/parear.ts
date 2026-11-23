@@ -1,16 +1,10 @@
 import "server-only";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { transacoes } from "@/db/schema";
-import { partes, type DataISO } from "../datas";
+import { diasEntre } from "../datas";
 import type { db } from "@/db";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
-const diasEntre = (a: DataISO, b: DataISO) => {
-  const pa = partes(a);
-  const pb = partes(b);
-  return Math.abs(Date.UTC(pa.ano, pa.mes - 1, pa.dia) - Date.UTC(pb.ano, pb.mes - 1, pb.dia)) / 86_400_000;
-};
 
 /**
  * Liga os dois lados de transferências importadas de arquivos diferentes:

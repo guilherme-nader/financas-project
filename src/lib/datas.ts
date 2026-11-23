@@ -55,6 +55,19 @@ export function somarMeses(data: DataISO, meses: number): DataISO {
   return montarData(ano, mes + meses, dia);
 }
 
+/** Soma (ou subtrai) dias corridos. */
+export function somarDias(data: DataISO, dias: number): DataISO {
+  const { ano, mes, dia } = partes(data);
+  return new Date(Date.UTC(ano, mes - 1, dia + dias)).toISOString().slice(0, 10);
+}
+
+/** Distância em dias corridos entre duas datas (sempre positiva). */
+export function diasEntre(a: DataISO, b: DataISO): number {
+  const pa = partes(a);
+  const pb = partes(b);
+  return Math.abs(Date.UTC(pa.ano, pa.mes - 1, pa.dia) - Date.UTC(pb.ano, pb.mes - 1, pb.dia)) / 86_400_000;
+}
+
 export function hojeISO(fuso = "America/Sao_Paulo"): DataISO {
   // en-CA formata como AAAA-MM-DD.
   return new Intl.DateTimeFormat("en-CA", { timeZone: fuso }).format(new Date());

@@ -128,7 +128,7 @@ function Campos({
 function Resultado({ estado }: { estado: EstadoImportacaoExtrato }) {
   const r = estado.resultados ?? [];
   const soma = (
-    k: "novas" | "duplicadas" | "transferenciasProprias" | "naCaixinha" | "pareadas" | "categorizadas" | "paraRevisar" | "reclassificadas" | "suspeitos",
+    k: "novas" | "duplicadas" | "jaLancadas" | "transferenciasProprias" | "naCaixinha" | "pareadas" | "categorizadas" | "paraRevisar" | "reclassificadas" | "suspeitos",
   ) =>
     r.reduce((s, x) => s + x[k], 0);
   const naoBatem = r.flatMap((x) => x.diasQueNaoBatem.map((d) => ({ ...d, arquivo: x.arquivoNome })));
@@ -157,6 +157,7 @@ function Resultado({ estado }: { estado: EstadoImportacaoExtrato }) {
             <Numero n={soma("reclassificadas")} cor="text-marca" texto="Pix de importações anteriores reconhecidos agora como transferência" />
             <Numero n={paraRevisar} cor="text-alerta" texto="precisam da sua confirmação" />
             <Numero n={soma("suspeitos")} cor="text-alerta" texto="lidos por OCR com valor a conferir (estão no Revisar)" />
+            <Numero n={soma("jaLancadas")} cor="text-marca" texto="já tinham sido lançados à mão (reconhecidos, sem duplicar)" />
             <Numero n={soma("duplicadas")} cor="text-suave" texto="já estavam importados (ignorados)" />
           </ul>
           {!r.some((x) => x.saldoConferivel) ? (

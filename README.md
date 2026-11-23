@@ -59,6 +59,8 @@ compras em moeda estrangeira, IOF, estornos e parcelas tratados; total conferido
 - **Transferências entre contas** importadas de arquivos diferentes (Pix que sai de uma e entra na outra, pagamento
   de fatura na conta e no cartão) são ligadas automaticamente.
 - **Caixinha:** conta marcada como "Caixinha de terceiros" (futebol, vaquinha) aparece na lista, mas fica fora dos totais.
+- **Lançou à mão antes do extrato chegar?** (ex.: um Pix do dia, pelo print do app) A importação reconhece o lançamento
+  manual de mesmo valor na mesma conta, até 3 dias de diferença: ele ganha a identidade do banco e mantém a categoria, sem duplicar.
 - **Revisar** mostra primeiro os grupos (Pix de várias pessoas no mesmo dia, compras no exterior) e depois os avulsos, 30 por vez.
 
 ## OCR (extrato da conta XP)
