@@ -21,6 +21,9 @@ export type ResumoImportacao = {
   categorizadas: number;
   paraRevisar: number;
   totalCentavos: number;
+  /** null = o arquivo não informa o total; senão, se a soma lida bate com o total impresso. */
+  totalConfere: boolean | null;
+  totalInformadoCentavos: number | null;
   conferencias: { vencimento: DataISO; totalFatura: number; pagamento: number; confere: boolean }[];
   linhasIgnoradas: number;
 };
@@ -67,6 +70,11 @@ export async function gravarFatura(params: {
     categorizadas: 0,
     paraRevisar: 0,
     totalCentavos: fatura.totalCentavos,
+    totalConfere:
+      fatura.totalInformadoCentavos == null
+        ? null
+        : fatura.totalInformadoCentavos === fatura.totalCentavos + (fatura.saldoAnteriorCentavos ?? 0),
+    totalInformadoCentavos: fatura.totalInformadoCentavos ?? null,
     conferencias: [],
     linhasIgnoradas: fatura.linhasIgnoradas.length,
   };
@@ -117,7 +125,14 @@ export async function gravarFatura(params: {
         if (existente.status === "prevista" && linha.status === "realizada") {
           await tx
             .update(transacoes)
-            .set({ status: "realizada", dataCaixa: linha.dataCaixa, faturaId, importacaoId: importacao.id, atualizadoEm: new Date() })
+            .set({
+              status: "realizada",
+              data: linha.data,
+              dataCaixa: linha.dataCaixa,
+              faturaId,
+              importacaoId: importacao.id,
+              atualizadoEm: new Date(),
+            })
             .where(eq(transacoes.id, existente.id));
           resumo.confirmadas++;
         } else if (linha.status === "realizada") {
@@ -166,7 +181,7 @@ export async function gravarFatura(params: {
     // Esta fatura: total conferido pelo arquivo.
     await tx
       .update(faturas)
-      .set({ totalInformadoCentavos: fatura.totalCentavos, status: "fechada" })
+      .set({ totalInformadoCentavos: fatura.totalInformadoCentavos ?? fatura.totalCentavos, status: "fechada" })
       .where(eq(faturas.id, await faturaDe(vencimento)));
 
     // O pagamento listado aqui quita a fatura anterior: confere o valor.

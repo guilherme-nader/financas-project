@@ -42,6 +42,7 @@ function Campos({
   const [contaId, setContaId] = useState(cartoes[0]?.id ?? "");
   const vencimentoRef = useRef<HTMLInputElement>(null);
 
+  const ehPdf = /\.pdf$/i.test(arquivoNome);
   const escolherArquivo = (arquivo: File | undefined) => {
     setArquivoNome(arquivo?.name ?? "");
     // A XP põe o vencimento no nome: "Fatura2026-10-10.csv".
@@ -64,7 +65,7 @@ function Campos({
         <span className="flex h-13 w-13 items-center justify-center rounded-2xl bg-marca-clara text-marca">
           <IconeEnviar tamanho={26} />
         </span>
-        <span className="text-base font-semibold">{arquivoNome || "Escolher a fatura (.csv)"}</span>
+        <span className="text-base font-semibold">{arquivoNome || "Escolher a fatura"}</span>
         <span className="text-[13px] text-suave">
           Fatura do cartão XP exportada em CSV. O vencimento é lido do nome do arquivo.
         </span>
@@ -96,9 +97,11 @@ function Campos({
             ))}
           </select>
         </Campo>
-        <Campo id="vencimento" rotulo="Vencimento da fatura">
-          <input ref={vencimentoRef} id="vencimento" name="vencimento" type="date" required className={classeEntrada} />
-        </Campo>
+        {!ehPdf && (
+          <Campo id="vencimento" rotulo="Vencimento da fatura">
+            <input ref={vencimentoRef} id="vencimento" name="vencimento" type="date" required className={classeEntrada} />
+          </Campo>
+        )}
       </div>
 
       <AvisoErro mensagem={erro} />
@@ -122,6 +125,17 @@ function Resumo({ r }: { r: NonNullable<EstadoImportacao["resumo"]> }) {
       <p className="text-sm text-suave">
         {r.compras} compras, total <strong className="text-tinta">{formatarCentavos(r.totalCentavos)}</strong>
       </p>
+      {r.totalConfere !== null && (
+        <p
+          className={`rounded-xl px-3.5 py-2.5 text-sm font-medium ${
+            r.totalConfere ? "bg-marca-clara text-marca-escura" : "bg-alerta-clara text-alerta"
+          }`}
+        >
+          {r.totalConfere
+            ? `✓ Total confere com o valor impresso na fatura (${formatarCentavos(r.totalInformadoCentavos ?? 0)}).`
+            : `A soma lida não bate com o valor impresso na fatura (${formatarCentavos(r.totalInformadoCentavos ?? 0)}).`}
+        </p>
+      )}
       <ul className="flex flex-col gap-2 text-sm">
         <Numero n={r.categorizadas} cor="text-marca" texto="categorizadas sozinhas" />
         <Numero n={r.paraRevisar} cor="text-alerta" texto="precisam da sua confirmação" />

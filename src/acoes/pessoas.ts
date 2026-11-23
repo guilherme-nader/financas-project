@@ -6,8 +6,9 @@ import { z } from "zod";
 import { db } from "@/db";
 import { pessoas } from "@/db/schema";
 import { exigirUsuario } from "@/lib/dal";
+import { reclassificarPendentes } from "@/lib/importacao/reclassificar";
 
-export type EstadoPessoa = { erro?: string; salvo?: boolean };
+export type EstadoPessoa = { erro?: string; salvo?: boolean; reclassificadas?: number };
 
 /** Um nome por linha, como aparece nos extratos ("FULANO B S SOUZA"). */
 export async function salvarNomesNoBanco(pessoaId: string, _anterior: EstadoPessoa, form: FormData): Promise<EstadoPessoa> {
@@ -19,7 +20,10 @@ export async function salvarNomesNoBanco(pessoaId: string, _anterior: EstadoPess
     .filter((n) => n.length >= 3)
     .slice(0, 20);
   const unicos = [...new Map(nomes.map((n) => [n.toUpperCase(), n])).values()];
-  await db.update(pessoas).set({ nomesNoBanco: unicos }).where(eq(pessoas.id, pessoaId));
+  const reclassificadas = await db.transaction(async (tx) => {
+    await tx.update(pessoas).set({ nomesNoBanco: unicos }).where(eq(pessoas.id, pessoaId));
+    return reclassificarPendentes(tx);
+  });
   refresh();
-  return { salvo: true };
+  return { salvo: true, reclassificadas };
 }

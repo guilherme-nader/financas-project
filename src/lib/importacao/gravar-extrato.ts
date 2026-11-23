@@ -2,9 +2,10 @@ import "server-only";
 import { and, eq, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { categorias, contas, importacoes, pessoas, regras, transacoes, type Conta } from "@/db/schema";
-import { classificarMovimento } from "./classificar";
+import { classificarMovimento, contraparteDe } from "./classificar";
 import type { ExtratoLido } from "./extrato";
 import { parearTransferencias } from "./parear";
+import { reclassificarPendentes } from "./reclassificar";
 import { ordenarRegras } from "./regras";
 import { compacto } from "./texto";
 
@@ -16,6 +17,8 @@ export type ResumoExtrato = {
   novas: number;
   duplicadas: number;
   transferenciasProprias: number;
+  /** Pendentes de importações anteriores que viraram transferência com os nomes aprendidos agora. */
+  reclassificadas: number;
   /** Lançamentos de conta caixinha (fora dos totais). */
   naCaixinha: number;
   pareadas: number;
@@ -58,6 +61,7 @@ export async function gravarExtrato(params: {
     duplicadas: 0,
     transferenciasProprias: 0,
     naCaixinha: 0,
+    reclassificadas: 0,
     pareadas: 0,
     categorizadas: 0,
     paraRevisar: 0,
@@ -94,10 +98,13 @@ export async function gravarExtrato(params: {
 
     const ocorrencias = new Map<string, number>();
     for (const m of extrato.movimentos) {
-      const base = `e|${m.data}|${compacto(m.lancamento)}|${compacto(m.descricao)}|${m.valorCentavos}`;
+      // Com identificador do banco (OFX/CSV Nubank), ele é a chave; senão, data+texto+valor+ordem.
+      const base = m.idBanco
+        ? `id|${m.idBanco}`
+        : `e|${m.data}|${compacto(m.lancamento)}|${compacto(m.descricao)}|${m.valorCentavos}`;
       const ordem = (ocorrencias.get(base) ?? 0) + 1;
       ocorrencias.set(base, ordem);
-      const chave = `${base}|${ordem}`;
+      const chave = m.idBanco ? base : `${base}|${ordem}`;
 
       const existente = await tx.query.transacoes.findFirst({
         where: and(eq(transacoes.contaId, conta.id), eq(transacoes.chaveImportacao, chave)),
@@ -131,6 +138,7 @@ export async function gravarExtrato(params: {
         dataCaixa: m.data,
         descricao: c.descricao,
         descricaoOriginal: `${m.lancamento} ${m.descricao}`.trim(),
+        contraparte: contraparteDe(m),
         valorCentavos: m.valorCentavos,
         categoriaId,
         pessoaId: conta.pessoaId,
@@ -154,6 +162,8 @@ export async function gravarExtrato(params: {
     }
 
     resumo.pareadas = await parearTransferencias(tx);
+    // Nome aprendido neste extrato pode resolver pendentes de extratos importados antes.
+    resumo.reclassificadas = await reclassificarPendentes(tx);
 
     await tx
       .update(importacoes)

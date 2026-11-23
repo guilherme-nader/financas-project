@@ -142,6 +142,8 @@ export const transacoes = pgTable(
     descricao: text("descricao").notNull(),
     /** Texto cru como veio do banco (ex.: "PAG*JOSEFRANCISCO"). */
     descricaoOriginal: text("descricao_original"),
+    /** Em Pix/TED importados: o nome de quem pagou ou recebeu, como o banco escreveu. */
+    contraparte: text("contraparte"),
     valorCentavos: integer("valor_centavos").notNull(),
     categoriaId: uuid("categoria_id").references(() => categorias.id, { onDelete: "set null" }),
     pessoaId: uuid("pessoa_id")

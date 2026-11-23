@@ -12,31 +12,46 @@ import type { ExtratoLido } from "@/lib/importacao/extrato";
 import { lerExtratoItau, type ItemDeTexto } from "@/lib/importacao/extrato-itau-pdf";
 import { lerExtratoSantander } from "@/lib/importacao/extrato-santander-pdf";
 import { itensDoPdf } from "@/lib/importacao/pdf";
+import { ehFaturaNubank, lerFaturaNubank } from "@/lib/importacao/fatura-nubank-pdf";
+import { linhasDoPdf } from "@/lib/importacao/linhas-pdf";
+import { decodificarOfx, lerExtratoNubankCsv, lerOfx } from "@/lib/importacao/ofx";
 
 export type EstadoImportacao = {
   erro?: string;
   resumo?: ResumoImportacao & { contaNome: string; arquivoNome: string; vencimento: string };
 };
 
-const TAMANHO_MAXIMO = 512 * 1024; // CSV de fatura tem poucos KB.
+const TAMANHO_MAXIMO = 3 * 1024 * 1024; // fatura em PDF tem poucas centenas de KB.
+
+const ehPdf = (arquivo: File) => arquivo.type === "application/pdf" || /\.pdf$/i.test(arquivo.name);
 
 export async function importarFatura(_anterior: EstadoImportacao, form: FormData): Promise<EstadoImportacao> {
   const usuario = await exigirUsuario();
 
   const arquivo = form.get("arquivo");
   const contaId = String(form.get("contaId") ?? "");
-  const vencimento = String(form.get("vencimento") ?? "");
+  let vencimento = String(form.get("vencimento") ?? "");
 
-  if (!(arquivo instanceof File) || arquivo.size === 0) return { erro: "Escolha o arquivo da fatura (.csv)." };
-  if (arquivo.size > TAMANHO_MAXIMO) return { erro: "Arquivo grande demais para uma fatura em CSV." };
-  if (!ehDataValida(vencimento)) return { erro: "Informe a data de vencimento da fatura." };
+  if (!(arquivo instanceof File) || arquivo.size === 0) return { erro: "Escolha o arquivo da fatura." };
+  if (arquivo.size > TAMANHO_MAXIMO) return { erro: "Arquivo grande demais para uma fatura." };
 
   const conta = await db.query.contas.findFirst({ where: eq(contas.id, contaId) });
   if (!conta || conta.tipo !== "cartao") return { erro: "Escolha o cartão desta fatura." };
 
   let fatura;
   try {
-    fatura = lerFaturaXpCsv(await arquivo.text());
+    if (ehPdf(arquivo)) {
+      // Fatura do Nubank em PDF: o vencimento vem do próprio documento.
+      const linhas = linhasDoPdf(await itensDoPdf(new Uint8Array(await arquivo.arrayBuffer())));
+      if (linhas.length === 0) return { erro: "O PDF não tem texto (é uma imagem). Baixe a fatura pelo app do banco." };
+      if (!ehFaturaNubank(linhas)) return { erro: "PDF de fatura ainda não reconhecido. Por enquanto: Nubank (PDF) e XP (CSV)." };
+      const lida = lerFaturaNubank(linhas);
+      fatura = lida.fatura;
+      vencimento = lida.vencimento;
+    } else {
+      if (!ehDataValida(vencimento)) return { erro: "Informe a data de vencimento da fatura." };
+      fatura = lerFaturaXpCsv(await arquivo.text());
+    }
   } catch (erro) {
     if (erro instanceof ErroDeFormato) return { erro: erro.message };
     throw erro;
@@ -70,7 +85,7 @@ export async function importarExtratos(
   const contaId = String(form.get("contaId") ?? "");
   const arquivos = form.getAll("arquivos").filter((a): a is File => a instanceof File && a.size > 0);
 
-  if (arquivos.length === 0) return { erro: "Escolha o(s) extrato(s) em PDF." };
+  if (arquivos.length === 0) return { erro: "Escolha o(s) extrato(s): OFX, CSV do Nubank ou PDF." };
   if (arquivos.length > MAX_ARQUIVOS) return { erro: `Mande até ${MAX_ARQUIVOS} arquivos por vez.` };
 
   const conta = await db.query.contas.findFirst({ where: eq(contas.id, contaId) });
@@ -80,7 +95,16 @@ export async function importarExtratos(
   const falhas: NonNullable<EstadoImportacaoExtrato["falhas"]> = [];
   for (const arquivo of arquivos) {
     try {
-      const itens = await itensDoPdf(new Uint8Array(await arquivo.arrayBuffer()));
+      const bytes = new Uint8Array(await arquivo.arrayBuffer());
+      if (/\.ofx$/i.test(arquivo.name) || /OFXHEADER|<OFX>/i.test(new TextDecoder("latin1").decode(bytes.slice(0, 600)))) {
+        lidos.push({ arquivoNome: arquivo.name, extrato: lerOfx(decodificarOfx(bytes)) });
+        continue;
+      }
+      if (/\.csv$/i.test(arquivo.name)) {
+        lidos.push({ arquivoNome: arquivo.name, extrato: lerExtratoNubankCsv(new TextDecoder("utf-8").decode(bytes)) });
+        continue;
+      }
+      const itens = await itensDoPdf(bytes);
       if (itens.length === 0) {
         falhas.push({
           arquivoNome: arquivo.name,

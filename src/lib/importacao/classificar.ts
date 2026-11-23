@@ -47,6 +47,11 @@ export type Classificacao = {
 
 const PIX_OU_TED = /\b(PIX|TED|DOC|TRANSF)/;
 
+/** O movimento é um Pix/TED/transferência com nome de contraparte? (Para guardar e reclassificar depois.) */
+export function contraparteDe(m: { lancamento: string; descricao: string }): string | null {
+  return PIX_OU_TED.test(normalizar(m.lancamento)) && m.descricao.trim() ? m.descricao.trim() : null;
+}
+
 export function classificarMovimento(
   m: MovimentoExtrato,
   contexto: { nomesProprios: string[]; regrasOrdenadas: RegraAplicavel[] },

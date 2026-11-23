@@ -10,7 +10,7 @@ import { formatarCentavos } from "@/lib/dinheiro";
 
 type Conta = { id: string; nome: string };
 
-const NOME_BANCO = { itau: "Itaú", santander: "Santander" } as const;
+const NOME_BANCO = { itau: "Itaú", santander: "Santander", nubank: "Nubank", ofx: "OFX" } as const;
 
 export function FormularioExtrato({ contas }: { contas: Conta[] }) {
   const [rodada, setRodada] = useState(0);
@@ -50,16 +50,16 @@ function Campos({
           <IconeEnviar tamanho={26} />
         </span>
         <span className="text-base font-semibold">
-          {nomes.length === 0 ? "Escolher extrato(s) em PDF" : nomes.length === 1 ? nomes[0] : `${nomes.length} arquivos`}
+          {nomes.length === 0 ? "Escolher extrato(s)" : nomes.length === 1 ? nomes[0] : `${nomes.length} arquivos`}
         </span>
         <span className="text-[13px] text-suave">
-          Itaú (conta corrente) ou Santander (extrato consolidado). Pode mandar vários meses de uma vez.
+          OFX (qualquer banco), CSV do Nubank, ou PDF do Itaú e do Santander. Pode mandar vários de uma vez.
         </span>
         <input
           id="arquivos"
           name="arquivos"
           type="file"
-          accept=".pdf,application/pdf"
+          accept=".pdf,application/pdf,.ofx,.csv,text/csv"
           multiple
           required
           className="sr-only"
@@ -91,7 +91,7 @@ function Campos({
 
 function Resultado({ estado }: { estado: EstadoImportacaoExtrato }) {
   const r = estado.resultados ?? [];
-  const soma = (k: "novas" | "duplicadas" | "transferenciasProprias" | "naCaixinha" | "pareadas" | "categorizadas" | "paraRevisar") =>
+  const soma = (k: "novas" | "duplicadas" | "transferenciasProprias" | "naCaixinha" | "pareadas" | "categorizadas" | "paraRevisar" | "reclassificadas") =>
     r.reduce((s, x) => s + x[k], 0);
   const naoBatem = r.flatMap((x) => x.diasQueNaoBatem.map((d) => ({ ...d, arquivo: x.arquivoNome })));
   const paraRevisar = soma("paraRevisar");
@@ -116,6 +116,7 @@ function Resultado({ estado }: { estado: EstadoImportacaoExtrato }) {
             <Numero n={soma("naCaixinha")} cor="text-suave" texto="na caixinha (aparecem na lista, fora dos totais)" />
             <Numero n={soma("transferenciasProprias")} cor="text-tinta" texto="transferências entre contas de vocês (fora dos totais)" />
             <Numero n={soma("pareadas")} cor="text-tinta" texto="transferências ligadas ao outro lado (outra conta ou cartão)" />
+            <Numero n={soma("reclassificadas")} cor="text-marca" texto="Pix de importações anteriores reconhecidos agora como transferência" />
             <Numero n={paraRevisar} cor="text-alerta" texto="precisam da sua confirmação" />
             <Numero n={soma("duplicadas")} cor="text-suave" texto="já estavam importados (ignorados)" />
           </ul>

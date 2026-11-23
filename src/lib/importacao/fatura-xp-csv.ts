@@ -30,8 +30,12 @@ export type PagamentoNaFatura = { data: DataISO; valorCentavos: number; portador
 export type FaturaLida = {
   compras: CompraFatura[];
   pagamentos: PagamentoNaFatura[];
-  /** Soma das compras e estornos: é o valor a pagar desta fatura. */
+  /** Soma das compras e estornos lidas no arquivo. */
   totalCentavos: number;
+  /** Valor da fatura impresso no próprio documento, quando existe (para conferir). */
+  totalInformadoCentavos?: number | null;
+  /** Parte do total que veio da fatura anterior não paga inteira (fatura anterior − pagamento). */
+  saldoAnteriorCentavos?: number;
   linhasIgnoradas: { linha: number; conteudo: string; motivo: string }[];
 };
 

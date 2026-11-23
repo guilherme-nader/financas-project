@@ -21,6 +21,11 @@ export function FormularioNomes({ pessoa }: { pessoa: { id: string; nome: string
         className={`${classeEntrada} py-3 font-mono text-sm uppercase`}
       />
       <AvisoErro mensagem={estado.erro} />
+      {!!estado.reclassificadas && (
+        <p role="status" className="rounded-xl bg-marca-clara px-3.5 py-2.5 text-sm font-medium text-marca-escura">
+          {estado.reclassificadas} Pix que estavam para revisar viraram transferência entre contas.
+        </p>
+      )}
       <button
         type="submit"
         disabled={enviando}

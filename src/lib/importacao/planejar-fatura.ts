@@ -9,7 +9,7 @@ import { compacto } from "./texto";
  * Chaves de importação
  * - Compra à vista: identificada pela fatura, data, estabelecimento, valor e a ordem entre
  *   compras idênticas (duas corridas de Uber iguais no mesmo dia são duas linhas).
- * - Parcela: identificada pela COMPRA ORIGINAL e pelo número da parcela, sem depender da
+ * - Parcela: identificada pela COMPRA ORIGINAL (mês, loja, valor, total) e pelo número, sem depender da
  *   fatura. Assim a parcela 3/4 criada como prevista ao importar a fatura com a 2/4 é a
  *   mesma linha que aparece de verdade na fatura seguinte, e é confirmada, não duplicada.
  */
@@ -66,8 +66,11 @@ export function planejarFatura(fatura: FaturaLida, vencimento: DataISO): LinhaPl
     }
 
     // Parcela k de n: esta e as próximas (previstas) até a última.
-    const baseGrupo = `p|${c.data}|${estab}|${c.valorCentavos}|${c.parcelaTotal}|${c.parcelaNumero}`;
-    const grupo = `p|${c.data}|${estab}|${c.valorCentavos}|${c.parcelaTotal}|${ordem(baseGrupo)}`;
+    // A compra é identificada pelo MÊS em que foi feita: o Nubank lança a 1ª parcela no dia da
+    // compra e as seguintes no dia do fechamento, então o dia exato não se repete entre faturas.
+    const mesCompra = c.data.slice(0, 7);
+    const baseGrupo = `p|${mesCompra}|${estab}|${c.valorCentavos}|${c.parcelaTotal}|${c.parcelaNumero}`;
+    const grupo = `p|${mesCompra}|${estab}|${c.valorCentavos}|${c.parcelaTotal}|${ordem(baseGrupo)}`;
     for (let numero = c.parcelaNumero; numero <= c.parcelaTotal; numero++) {
       const adiante = numero - c.parcelaNumero;
       linhas.push({

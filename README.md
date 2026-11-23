@@ -10,7 +10,7 @@ e os extratos do mês e o sistema organiza o resto.
 | 1. Base | Login dos dois, contas (corrente, cartão, investimento), categorias, lançamento manual com parcelas e transferências, resumo do mês | ✅ pronta |
 | 2. Histórico | Importar as planilhas "Planejamento oficial" e a planilha-modelo | próxima |
 | 3. Projeção | Recorrências (financiamento, condomínio, salários) e a visão meses × contas | |
-| 4. Importação | ✅ Faturas do cartão XP (CSV) · ✅ Extratos em PDF do Itaú (conta corrente) e do Santander (consolidado) · ✅ Regras, Revisar (um a um ou em grupo), transferências entre contas ligadas sozinhas · ⏳ conta XP (PDF em imagem, OCR), IA gratuita (Groq) | em andamento |
+| 4. Importação | ✅ Faturas: XP (CSV) e Nubank (PDF) · ✅ Extratos: OFX de qualquer banco, CSV do Nubank, PDF do Itaú e do Santander · ✅ Regras, Revisar (um a um ou em grupo), transferências ligadas sozinhas · ⏳ conta XP (PDF em imagem, OCR), IA gratuita (Groq) | em andamento |
 | 5. Orçamento e metas | Limites por categoria e metas com progresso | |
 
 ## Como o dinheiro é contado
@@ -36,15 +36,24 @@ e os extratos do mês e o sistema organiza o resto.
    - confere se o pagamento listado bate com o total da fatura anterior.
 4. O que nenhuma regra conhece vai para **Revisar**. Ao confirmar com "lembrar", vira regra e é aplicado nos outros pendentes iguais.
 
-## Importar extratos de conta (PDF)
+## Importar extratos de conta
 
-Em **Importar › Extrato de conta**, escolha a conta e um ou vários PDFs (vários meses de uma vez).
-O banco é reconhecido pelo conteúdo: Itaú ("Extrato conta corrente") e Santander ("Extrato Consolidado Inteligente").
+Em **Importar › Extrato de conta**, escolha a conta e um ou vários arquivos:
+
+| Formato | Bancos | Observação |
+|---|---|---|
+| **OFX** (recomendado) | Nubank e a maioria dos bancos | cada lançamento tem identificador do banco; nunca duplica |
+| CSV | Nubank | mesmo identificador do OFX (dá para alternar entre os dois) |
+| PDF | Itaú ("Extrato conta corrente"), Santander ("Extrato Consolidado Inteligente") | vários meses de uma vez |
+
+Faturas: **XP em CSV** (vencimento pelo nome do arquivo) e **Nubank em PDF** (vencimento e valor lidos do documento;
+compras em moeda estrangeira, IOF, estornos e parcelas tratados; total conferido com o valor impresso).
 
 - **Conferência:** saldo do dia anterior + movimentos = saldo informado pelo banco, dia a dia.
 - **Pix e TED para vocês mesmos viram transferência.** O nome do titular de cada extrato é aprendido sozinho;
   outros nomes (como o do cônjuge) ficam em **Mais › Nomes nos bancos**. Abreviações ("FULANO B S SOUZA") e nomes cortados são reconhecidos.
 - **Salário e rendimento** entram como receita. **Pagamento de fatura, aplicação e resgate** entram como transferência.
+- **A ordem não importa:** quando um nome novo é aprendido (ou salvo), os Pix que tinham ficado para revisão são reclassificados.
 - **Transferências entre contas** importadas de arquivos diferentes (Pix que sai de uma e entra na outra, pagamento
   de fatura na conta e no cartão) são ligadas automaticamente.
 - **Caixinha:** conta marcada como "Caixinha de terceiros" (futebol, vaquinha) aparece na lista, mas fica fora dos totais.
